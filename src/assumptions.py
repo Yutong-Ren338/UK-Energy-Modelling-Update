@@ -1,0 +1,131 @@
+# UK Energy Modelling Assumptions
+# This module contains key assumptions and parameters used throughout the energy modelling analysis
+
+# ============================================================================
+# PHYSICAL CONSTANTS
+# ============================================================================
+MolecularWeightCO2 = 44.01  # g/mol - Molecular weight of CO2
+
+# ============================================================================
+# PROJECTED DEMAND AND EMISSIONS TARGETS
+# ============================================================================
+
+EnergyDemand2050 = 575  # TWh - UK energy demand target for 2050
+
+# CO2 emissions targets and constraints
+CO2Emissions2050 = 59  # Mt CO2 - Maximum emissions allowed in 2050
+TotalCO2EmissionsCap19902100 = 29636  # Mt CO2 - Total carbon budget 1990-2100
+TotalCO2EmissionsCap19902050 = 26626  # Mt CO2 - Total carbon budget 1990-2050
+
+# ============================================================================
+# ECONOMIC PARAMETERS
+# ============================================================================
+
+DiscountRate = 0.05  # Discount rate for economic calculations
+USDToGBP = 0.78740157  # 2024 Average Closing USD/GBP exchange rate
+
+
+# ============================================================================
+# RENEWABLE ENERGY
+# ============================================================================
+
+
+class Renewables:
+    """Parameters for renewable energy technologies including solar, offshore wind, and onshore wind"""
+
+    class CapacityRatios:
+        """Mix ratios for different renewable technologies in the energy portfolio"""
+
+        Solar = 0.2  # Share of renewable capacity
+        OffshoreWind = 0.56  # Share of renewable capacity
+        OnshoreWind = 0.24  # Share of renewable capacity
+
+    class CapacityFactors:
+        """Average capacity factors (fraction of nameplate capacity achieved)"""
+
+        Solar = 0.108  # Average capacity factor for solar PV
+        OffshoreWind = 0.383  # Capacity factor (61% according to Department for Net Zero)
+        OnshoreWind = 0.293  # Capacity factor (45% according to Department for Net Zero)
+
+    class LCOE:
+        """Levelized Cost of Energy in 2024 GBP per MWh (Source: BEIS, 2023)"""
+
+        Solar = 30.0  # £/MWh for solar PV
+        OffshoreWind = 41.0  # £/MWh for offshore wind
+        OnshoreWind = 36.0  # £/MWh for onshore wind
+
+    # Calculated weighted average capacity factor across all renewable technologies
+    WeightedAverageCapacityFactor = (
+        CapacityFactors.Solar * CapacityRatios.Solar
+        + CapacityFactors.OffshoreWind * CapacityRatios.OffshoreWind
+        + CapacityFactors.OnshoreWind * CapacityRatios.OnshoreWind
+    )
+
+
+# ============================================================================
+# DIRECT AIR CAPTURE (DAC)
+# ============================================================================
+
+
+class DAC:
+    """Parameters for Direct Air Capture technology"""
+
+    class EnergyCost:
+        """Energy requirements for DAC processes in kJ per mol CO2 captured"""
+
+        Low = 43  # kJ/mol CO2 - Low energy process
+        Medium = 101  # kJ/mol CO2 - Medium energy process
+        High = 162  # kJ/mol CO2 - High energy process
+
+
+# ============================================================================
+# NUCLEAR POWER
+# ============================================================================
+
+
+class Nuclear:
+    """Parameters for nuclear power generation technologies"""
+
+    CapacityFactor = 0.9  # Based on Hinkley Point C performance
+
+    class CapacityRatios:
+        """Mix ratios for different nuclear technologies in the nuclear portfolio"""
+
+        Existing = 0.2  # Existing plants (including Hinkley Point C)
+        LargeReactors = 0.2  # New large reactors
+        SmallReactors = 0.6  # Small modular reactors (SMRs)
+
+    class LCOE:
+        """Levelized Cost of Energy in 2024 GBP per MWh for nuclear technologies"""
+
+        Existing = 130.0  # £/MWh for existing nuclear plants
+        LargeReactors = 80.0  # £/MWh for new large reactors
+        SmallReactors = 60.0  # £/MWh for small modular reactors
+
+    # Calculated weighted average LCOE across all nuclear technologies
+    WeightedAverageLCOE = (
+        LCOE.Existing * CapacityRatios.Existing
+        + LCOE.LargeReactors * CapacityRatios.LargeReactors
+        + LCOE.SmallReactors * CapacityRatios.SmallReactors
+    )
+
+
+# ============================================================================
+# HYDROGEN STORAGE
+# ============================================================================
+class Catalysers:
+    """Parameters for hydrogen production catalysers (electrolysers)"""
+
+    Efficiency = 0.74  # Converting electrical energy to hydrogen
+    Capex = 450  # USD/kW - Capital expenditure for equipment
+    Opex = 6.75  # USD/kW - Annual operational expenditure
+    Lifetime = 30  # years - Expected operational lifetime
+
+
+class Storage:
+    """Parameters for large-scale energy storage systems"""
+
+    Efficiency = 0.55  # Round-trip efficiency for storage systems
+    Capex = 726_527_571  # GBP/TWh - Capital expenditure for infrastructure
+    Opex = 10_897_913.565  # GBP/TWh - Annual operational expenditure
+    Lifetime = 30  # years - Expected operational lifetime
