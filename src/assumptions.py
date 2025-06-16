@@ -5,6 +5,7 @@
 # PHYSICAL CONSTANTS
 # ============================================================================
 MolecularWeightCO2 = 44.01  # g/mol - Molecular weight of CO2
+HoursPerYear = 24 * 365.25  # Average hours in a year including for leap years
 
 # ============================================================================
 # PROJECTED DEMAND AND EMISSIONS TARGETS
@@ -16,6 +17,7 @@ EnergyDemand2050 = 575  # TWh - UK energy demand target for 2050
 CO2Emissions2050 = 59  # Mt CO2 - Maximum emissions allowed in 2050
 TotalCO2EmissionsCap19902100 = 29636  # Mt CO2 - Total carbon budget 1990-2100
 TotalCO2EmissionsCap19902050 = 26626  # Mt CO2 - Total carbon budget 1990-2050
+NetNegativeRemovals = 592.720  # Mt CO2 - Yearly removals required to achieve net negative
 
 # ============================================================================
 # ECONOMIC PARAMETERS
@@ -23,7 +25,7 @@ TotalCO2EmissionsCap19902050 = 26626  # Mt CO2 - Total carbon budget 1990-2050
 
 DiscountRate = 0.05  # Discount rate for economic calculations
 USDToGBP = 0.78740157  # 2024 Average Closing USD/GBP exchange rate
-
+GBPToEuro = 1.16
 
 # ============================================================================
 # RENEWABLE ENERGY
@@ -55,7 +57,7 @@ class Renewables:
         OnshoreWind = 36.0  # £/MWh for onshore wind
 
     # Calculated weighted average capacity factor across all renewable technologies
-    WeightedAverageCapacityFactor = (
+    AverageCapacityFactor = (
         CapacityFactors.Solar * CapacityRatios.Solar
         + CapacityFactors.OffshoreWind * CapacityRatios.OffshoreWind
         + CapacityFactors.OnshoreWind * CapacityRatios.OnshoreWind
@@ -69,6 +71,8 @@ class Renewables:
 
 class DAC:
     """Parameters for Direct Air Capture technology"""
+
+    CarbonStorage = 7.5  # GBP/tonne CO2 - Cost of storing captured CO2
 
     class EnergyCost:
         """Energy requirements for DAC processes in kJ per mol CO2 captured"""
@@ -87,6 +91,7 @@ class Nuclear:
     """Parameters for nuclear power generation technologies"""
 
     CapacityFactor = 0.9  # Based on Hinkley Point C performance
+    Capacity = 12  # GW - Base load capacity of nuclear power
 
     class CapacityRatios:
         """Mix ratios for different nuclear technologies in the nuclear portfolio"""
@@ -103,7 +108,7 @@ class Nuclear:
         SmallReactors = 60.0  # £/MWh for small modular reactors
 
     # Calculated weighted average LCOE across all nuclear technologies
-    WeightedAverageLCOE = (
+    AverageLCOE = (
         LCOE.Existing * CapacityRatios.Existing
         + LCOE.LargeReactors * CapacityRatios.LargeReactors
         + LCOE.SmallReactors * CapacityRatios.SmallReactors
@@ -129,3 +134,9 @@ class Storage:
     Capex = 726_527_571  # GBP/TWh - Capital expenditure for infrastructure
     Opex = 10_897_913.565  # GBP/TWh - Annual operational expenditure
     Lifetime = 30  # years - Expected operational lifetime
+
+
+# ============================================================================
+# MISCELLANEOUS
+# ============================================================================
+TransportAndRapidResponseCost = 4  # GBP/MWh - Transport Rapid Response Costs
