@@ -18,10 +18,10 @@ jobs:
         run: uv install --dev
 
       - name: Run ruff check
-        run: ruff check --fix
+        run: ruff check --fix ./src
 
       - name: Run ruff format
-        run: ruff format
+        run: ruff format ./src
 
       #- name: Run pyright
       #  run: uv run pyright
