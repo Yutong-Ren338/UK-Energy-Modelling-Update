@@ -1,3 +1,5 @@
+from src.misc import annualised_cost
+
 # UK Energy Modelling Assumptions
 # This module contains key assumptions and parameters used throughout the energy modelling analysis
 
@@ -24,8 +26,8 @@ NetNegativeRemovals = 592.720  # Mt CO2 - Yearly removals required to achieve ne
 # ============================================================================
 
 DiscountRate = 0.05  # Discount rate for economic calculations
-USDToGBP = 0.78740157  # 2024 Average Closing USD/GBP exchange rate
-GBPToEuro = 1.16
+GBPToUSD = 1.35  # 2024 Average Closing USD/GBP exchange rate
+GBPToEuro = 1.18  # Just use the number from the RS report
 
 # ============================================================================
 # RENEWABLE ENERGY
@@ -118,25 +120,45 @@ class Nuclear:
 # ============================================================================
 # HYDROGEN STORAGE
 # ============================================================================
-class Catalysers:
-    """Parameters for hydrogen production catalysers (electrolysers)"""
+class Electrolysis:
+    """Parameters for hydrogen generation via electrolysis"""
+
+    # Source: IEA via RS report
 
     Efficiency = 0.74  # Converting electrical energy to hydrogen
-    Capex = 450  # USD/kW - Capital expenditure for equipment
-    Opex = 6.75  # USD/kW - Annual operational expenditure
+    Capex = 450 / GBPToUSD  # GBP/kW - Capital expenditure for equipment
+    Opex = Capex * 0.015  # GBP/kW - Annual operational expenditure
     Lifetime = 30  # years - Expected operational lifetime
+
+    AnnualisedCost = annualised_cost(Capex, Opex, Lifetime, DiscountRate)  # GBP/kW
 
 
 class Storage:
-    """Parameters for large-scale energy storage systems"""
+    """Parameters for large-scale hydrogen storage"""
 
-    Efficiency = 0.55  # Round-trip efficiency for storage systems
-    Capex = 726_527_571  # GBP/TWh - Capital expenditure for infrastructure
-    Opex = 10_897_913.565  # GBP/TWh - Annual operational expenditure
+    # For Capex, H21 NOE assumes £325M for 1.22 TWh. CS Smith et al (2023)
+    # take the midpoint of 1-2x this number, which is £399.59M per TWh.
+
+    Efficiency = 0.407  # Round-trip efficiency for storage systems
+    Capex = 400  # GBP/MWh delivered - Capital expenditure for infrastructure
+    Opex = Capex * 0.015  # GBP/MWh delivered - Annual operational expenditure
     Lifetime = 30  # years - Expected operational lifetime
+
+    AnnualisedCost = annualised_cost(Capex, Opex, Lifetime, DiscountRate)  # GBP/MWh
+
+
+class Generation:
+    """Parameters for electricity generation from stored hydrogen"""
+
+    Efficiency = 0.55  # Efficiency of converting stored hydrogen back to electricity
+    Capex = 425 / GBPToUSD  # GBP/kW - Capital expenditure for generation equipment
+    Opex = Capex * 0.015  # GBP/kW - Annual operational expenditure
+    Lifetime = 30  # years - Expected operational lifetime
+
+    AnnualisedCost = annualised_cost(Capex, Opex, Lifetime, DiscountRate)  # GBP/kW
 
 
 # ============================================================================
 # MISCELLANEOUS
 # ============================================================================
-TransportAndRapidResponseCost = 4  # GBP/MWh - Transport Rapid Response Costs
+OtherStorageCosts = 4  # GBP/MWh - Transport Rapid Response Costs

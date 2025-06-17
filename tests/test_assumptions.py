@@ -1,38 +1,27 @@
-import numpy as np
-from config import ABSOLUTE_TOLERANCE, RELATIVE_TOLERANCE
+from config import check
 
 import src.assumptions as A
-from src.misc import annualised_cost
 
 
 def test_renewable_weighted_average_capacity_factor() -> None:
     expected_value = 0.3064
-    # check approximate equality
-    assert np.isclose(A.Renewables.AverageCapacityFactor, expected_value, rtol=RELATIVE_TOLERANCE, atol=ABSOLUTE_TOLERANCE)
+    check(A.Renewables.AverageCapacityFactor, expected_value)
 
 
-def test_annualised_catalyser_cost() -> None:
-    # Annualised GBP/GW cost of the catalyser
-    annualised_cost_usd_per_kw = annualised_cost(
-        A.Catalysers.Capex,
-        A.Catalysers.Opex,
-        A.Catalysers.Lifetime,
-        A.DiscountRate,
-    )
-    annualised_cost_gbp_per_gw = annualised_cost_usd_per_kw * 1e6 * A.USDToGBP
-    expected = 28_364_682
-    assert np.isclose(annualised_cost_gbp_per_gw, expected, rtol=RELATIVE_TOLERANCE, atol=ABSOLUTE_TOLERANCE)
+def test_electrolyser_annualised_cost() -> None:
+    # CL Smith et al (2023). Table 6
+    expected = 26.7  # GBP/kW
+    check(A.Electrolysis.AnnualisedCost, expected)
 
 
-def test_annualised_storage_cost() -> None:
-    annualised_storage_cost_gbp_per_twh = (
-        annualised_cost(
-            A.Storage.Capex,
-            A.Storage.Opex,
-            A.Storage.Lifetime,
-            A.DiscountRate,
-        )
-        * A.Storage.Efficiency
-    )
-    expected = 31_987_766
-    assert np.isclose(annualised_storage_cost_gbp_per_twh, expected, rtol=RELATIVE_TOLERANCE, atol=ABSOLUTE_TOLERANCE)
+def test_storage_annualised_cost() -> None:
+    # CL Smith et al (2023). Table 6
+    # !! note they actually have 32.1
+    expected = 32.0  # GBP / MWh
+    check(A.Storage.AnnualisedCost, expected)
+
+
+def test_generation_annualised_cost() -> None:
+    # CL Smith et al (2023). Table 6
+    expected = 25.2  # GBP/kW
+    check(A.Generation.AnnualisedCost, expected)
