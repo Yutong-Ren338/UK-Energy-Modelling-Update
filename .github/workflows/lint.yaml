@@ -12,14 +12,11 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Install dev dependencies
-        run: uv install --dev
-
       - name: Run ruff check
-        run: ruff check --fix ./src
+        run: uv run ruff check --fix ./src
 
       - name: Run ruff format
-        run: ruff format ./src
+        run: uv run ruff format ./src
 
       #- name: Run pyright
       #  run: uv run pyright
