@@ -14,15 +14,16 @@ dependencies = [
     "pint>=0.24.4",
 ]
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "pytest>=8.4.0",
+    "ruff==0.11.12",
+    "pre-commit==3.2.0",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
@@ -32,6 +33,6 @@ line-length = 150
 target-version = "py312"
 preview = true
 lint.select = ["ALL"]
-lint.ignore = ["D", "S", "CPY001", "COM812", "T201", "N812"]
+lint.ignore = ["D", "S", "CPY001", "COM812", "T201", "N812", "N815", "N817"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["INP001"]

@@ -1,0 +1,27 @@
+name: Lint
+on: [push, pull_request]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      #- name: Ensure Clean Jupyter Notebooks
+      #  uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
+
+      - name: Setup uv
+        uses: astral-sh/uv-action@v1
+        with:
+          version: latest
+
+      - name: Install dev dependencies
+        run: uv install --dev
+
+      - name: Run ruff check
+        run: ruff check --fix
+
+      - name: Run ruff format
+        run: ruff format
+
+      #- name: Run pyright
+      #  run: uv run pyright
