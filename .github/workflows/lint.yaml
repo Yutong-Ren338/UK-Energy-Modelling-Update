@@ -10,9 +10,7 @@ jobs:
       #  uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
 
       - name: Setup uv
-        uses: astral-sh/uv-action@v1
-        with:
-          version: latest
+        uses: astral-sh/setup-uv@v5
 
       - name: Install dev dependencies
         run: uv install --dev
