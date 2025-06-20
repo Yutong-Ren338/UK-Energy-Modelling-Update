@@ -1,12 +1,17 @@
+import pint_pandas
 from pint import UnitRegistry
 
 ureg = UnitRegistry(auto_reduce_dimensions=True)
+pint_pandas.PintType.ureg = ureg
 
 ureg.define("GBP = [currency]")
 
 
 class Units:
     """Alias some common units for convenience"""
+
+    # dimensionless
+    dimensionless = ureg.dimensionless
 
     # basic
     h = ureg.hour
