@@ -23,7 +23,8 @@ def demand_era5(resample: str | None = None) -> pd.DataFrame:
 
     if resample:
         df = df.set_index("date").resample(resample).mean()
-    return df
+
+    return df.astype("pint[GW]")
 
 
 def demand_espeni(resample: str | None = None) -> pd.DataFrame:
@@ -48,4 +49,4 @@ def demand_espeni(resample: str | None = None) -> pd.DataFrame:
     if resample:
         df = df.set_index("date").resample(resample).mean()
 
-    return df
+    return df.astype("pint[GW]")

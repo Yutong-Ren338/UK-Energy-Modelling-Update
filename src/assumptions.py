@@ -46,7 +46,7 @@ class Renewables:
         OnshoreWind = 0.24
 
     class CapacityFactors:
-        """Average capacity factors (fraction of nameplate capacity achieved)"""
+        """Average capacity factors (fraction of nominal capacity achieved)"""
 
         Solar = 0.108
         OffshoreWind = 0.383  # 61% according to Department for Net Zero
@@ -142,7 +142,7 @@ class Storage:
     # For Capex, H21 NOE assumes £325M for 1.22 TWh. CS Smith et al (2023)
     # take the midpoint of 1-2x this number, which is £399.59M per TWh.
 
-    Efficiency = 0.407  # Round-trip efficiency
+    Efficiency = 0.407  # Round-trip efficiency (electrolysis * generation efficiencies
     Capex = 400 * U.GBP / U.MWh
     Opex = Capex * 0.015
     Lifetime = 30  # years

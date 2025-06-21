@@ -3,6 +3,7 @@ from pint import UnitRegistry
 
 ureg = UnitRegistry(auto_reduce_dimensions=True)
 pint_pandas.PintType.ureg = ureg
+ureg.setup_matplotlib()
 
 ureg.define("GBP = [currency]")
 
