@@ -34,6 +34,6 @@ line-length = 150
 target-version = "py312"
 preview = true
 lint.select = ["ALL"]
-lint.ignore = ["D", "S", "CPY001", "COM812", "T201", "N812", "N815", "N817"]
+lint.ignore = ["D", "S", "CPY001", "COM812", "T201", "N812", "N815", "N817", "PD901"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["INP001"]

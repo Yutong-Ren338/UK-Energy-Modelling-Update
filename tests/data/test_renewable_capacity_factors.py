@@ -1,9 +1,9 @@
 import pandas as pd
 
-from src.renewable_capacity_factors import get_renewable_capacity_factors
+from src.data.renewable_capacity_factors import get_renewable_capacity_factors
 
 
-def test_get_renewable_capacity_factors_loads_data_correctly():
+def test_get_renewable_capacity_factors() -> None:
     """Test that the function loads and combines PV and wind data correctly."""
     result = get_renewable_capacity_factors(rule=None)
 
@@ -26,7 +26,7 @@ def test_get_renewable_capacity_factors_loads_data_correctly():
     assert isinstance(result.index, pd.DatetimeIndex)
 
 
-def test_get_renewable_capacity_factors_with_resampling():
+def test_get_renewable_capacity_factors_resampling() -> None:
     """Test that the function applies resampling when rule is provided."""
     # Get original hourly data
     hourly_result = get_renewable_capacity_factors(rule=None)
