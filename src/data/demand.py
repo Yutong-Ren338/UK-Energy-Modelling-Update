@@ -39,11 +39,11 @@ def demand_espeni(resample: str | None = None) -> pd.DataFrame:
     """
 
     # demand is in MW
-    df = pd.read_csv(DATA_DIR / "espeni.csv", parse_dates=True)
+    df = pd.read_csv(DATA_DIR / "espeni.csv")
     df = df[["ELEXM_utc", "POWER_ESPENI_MW"]]
     df = df.rename(columns={"ELEXM_utc": "date", "POWER_ESPENI_MW": "demand"})
     df["demand"] /= 1000.0  # convert to GW
-    df["date"] = pd.to_datetime(df["date"])
+    df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None)
 
     # resample to daily
     if resample:
