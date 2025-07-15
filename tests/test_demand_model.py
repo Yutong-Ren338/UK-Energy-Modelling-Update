@@ -90,7 +90,7 @@ def test_combined_seasonality_index() -> None:
     assert gas_std > electricity_std
 
     # Create the plot artifact
-    plt.figure(figsize=(10, 6))
+    plt.figure()
     plt.plot(df_combined["day_of_year"], df_combined["seasonality_index_gas"], label="Gas Seasonality Index")
     plt.plot(df_combined["day_of_year"], df_combined["seasonality_index_electricity"], label="Electricity Seasonality Index")
     plt.xlabel("Day of Year")
@@ -102,7 +102,7 @@ def test_combined_seasonality_index() -> None:
     # Save the plot as an artifact
     output_dir = Path("tests/output")
     output_dir.mkdir(exist_ok=True)
-    plt.savefig(output_dir / "seasonality_index_comparison.png", dpi=150, bbox_inches="tight")
+    plt.savefig(output_dir / "seasonality_index_comparison.png")
     plt.close()
 
 
