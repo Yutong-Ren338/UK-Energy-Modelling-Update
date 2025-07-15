@@ -15,6 +15,9 @@ HoursPerYear = 24 * 365.25 * U.h  # Including leap years
 # ============================================================================
 
 EnergyDemand2050 = 575 * U.TWh  # UK energy demand target for 2050
+CB7EnergyDemand2050 = 682.39 * U.TWh  # Seventh Carbon Budget energy demand target for 2050
+CB7EnergyDemand2050Buildings = 355.44 * U.TWh  # Seventh Carbon Budget energy demand for buildings in 2050
+CB7FractionHeatDemandBuildings = 0.597  # Fraction of energy demand from buildings that is for heating in 2050
 
 # CO2 emissions targets and constraints
 CO2Emissions2050 = 59  # Mt CO2 - Maximum emissions allowed in 2050

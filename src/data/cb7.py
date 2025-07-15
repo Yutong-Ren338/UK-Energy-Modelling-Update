@@ -2,6 +2,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.units import Units as U
+
 TARGET_YEAR = 2050
 
 
@@ -22,10 +24,10 @@ def frac_heat_demand_from_buildings() -> float:
 
     # Filter for residential buildings in 2050 under Balanced Pathway scenario
     mask = (
-        (df["sector"] == "Residential buildings")
+        (df["scenario"] == "Balanced Pathway")
         & (df["year"] == TARGET_YEAR)
+        & (df["sector"] == "Residential buildings")
         & (df["variable"] == "Energy: gross demand electricity")
-        & (df["scenario"] == "Balanced Pathway")
     )
     df_filtered = df[mask]
 
@@ -34,3 +36,36 @@ def frac_heat_demand_from_buildings() -> float:
     total_demand = df_filtered["value"].sum()
 
     return heating_demand / total_demand
+
+
+def buildings_electricity_demand() -> float:
+    """
+    Calculate the total electricity demand for UK residential and non-residential buildings in 2050 in TWh.
+
+    Returns:
+        float: Total electricity demand for buildings in 2050 in TWh.
+    """
+    data_path = Path(__file__).parents[2] / "data" / "new" / "The-Seventh-Carbon-Budget-full-dataset.xlsx"
+    df = pd.read_excel(data_path, sheet_name="Sector-level data")
+    df = df[df["scenario"] == "Balanced Pathway"]
+    df = df[df["country"] == "United Kingdom"]
+    df = df[df["year"] == TARGET_YEAR]
+    df = df[(df["sector"] == "Residential buildings") | (df["sector"] == "Non-residential buildings")]
+    df = df[df["variable"] == "Energy: final demand electricity"]
+    return df["value"].sum() * U.TWh
+
+
+def total_demand_2050() -> float:
+    """
+    Calculate the total electricity demand for the UK in 2050 in TWh.
+
+    Returns:
+        float: Total energy demand for buildings in 2050 in TWh.
+    """
+    data_path = Path(__file__).parents[2] / "data" / "new" / "The-Seventh-Carbon-Budget-full-dataset.xlsx"
+    df = pd.read_excel(data_path, sheet_name="Economy-wide data")
+    df = df[df["scenario"] == "Balanced Pathway"]
+    df = df[df["country"] == "United Kingdom"]
+    df = df[df["year"] == TARGET_YEAR]
+    df = df[df["variable"] == "Energy: final demand electricity"]
+    return df["value"].sum() * U.TWh
