@@ -1,8 +1,10 @@
-### Data sources
+### Data Sources
 
-- Electrical half hourly raw and cleaned datasets for Great Britain from 2009-11-05: https://zenodo.org/records/4739408
--  ERA5 derived time series of European country-aggregate electricity demand, wind power generation and solar power generation  https://researchdata.reading.ac.uk/273/
-- Renewable capacity factors https://www.renewables.ninja/
-- https://github.com/benmcwilliams/gas-demand for daily gas demand data
-- CCC's The Seventh Carbon Budget: https://www.theccc.org.uk/publication/the-seventh-carbon-budget/ for various assumptions including 2050 demand
-- CCC's The Seventh Carbon Budget methodology report https://www.theccc.org.uk/publication/methodology-report-uk-northern-ireland-wales-and-scotland-carbon-budget-advice/ for hourly electricity demand data
+| Source | Use | Link |
+|--------|-----|------|
+| Zenodo | Electrical half hourly raw and cleaned datasets for Great Britain from 2009-11-05 | [Dataset](https://zenodo.org/records/4739408) |
+| University of Reading | ERA5 derived time series of European country-aggregate electricity demand, wind power generation and solar power generation | [Dataset](https://researchdata.reading.ac.uk/273/) |
+| Renewables.ninja | Renewable capacity factors | [Website](https://www.renewables.ninja/) |
+| GitHub (benmcwilliams) | Daily gas demand data | [Repository](https://github.com/benmcwilliams/gas-demand) |
+| CCC (Climate Change Committee) | Various assumptions including 2050 demand | [Report](https://www.theccc.org.uk/publication/the-seventh-carbon-budget/) |
+| CCC (Climate Change Committee) | Hourly electricity demand data | [Methodology Report](https://www.theccc.org.uk/publication/methodology-report-uk-northern-ireland-wales-and-scotland-carbon-budget-advice/) |
