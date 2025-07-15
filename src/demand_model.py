@@ -145,6 +145,4 @@ def demand_scaling(demand_data: str = "era5", *, filter_ldz: bool = True) -> pd.
     daily_non_heating_demand = non_heating_demand / 365 * df_combined["seasonality_index_electricity"]
 
     # add in the rest of the demand
-    daily_total_demand = daily_heating_demand + daily_non_heating_demand
-
-    return daily_total_demand
+    return daily_heating_demand + daily_non_heating_demand
