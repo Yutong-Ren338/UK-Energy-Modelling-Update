@@ -1,7 +1,8 @@
 import pandas as pd
 
 import src.assumptions as A
-from src.data import demand, renewable_capacity_factors
+from src.data import renewable_capacity_factors
+from src.demand_model import get_raw_demand
 from src.units import Units as U
 
 
@@ -30,18 +31,10 @@ def get_net_supply(demand_data: str = "era5") -> pd.DataFrame:
 
     Returns:
         pd.DataFrame: DataFrame with renewable capacity as columns and daily net demand (supply - demand) as values.
-                     Negative values indicate demand exceeds supply.
-
-    Raises:
-        ValueError: If demand_data is not "era5" or "espeni".
+                      Negative values indicate demand exceeds supply.
     """
     # get demand
-    if demand_data == "era5":
-        demand_df = demand.demand_era5("D")
-    elif demand_data == "espeni":
-        demand_df = demand.demand_espeni("D")
-    else:
-        raise ValueError("Invalid demand_data. Choose 'era5' or 'espeni'.")
+    demand_df = get_raw_demand(demand_data)
 
     # scale each year's demand to 2050 demand
     AVERAGE_YEAR = True  # noqa: N806

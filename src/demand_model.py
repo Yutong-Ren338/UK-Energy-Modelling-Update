@@ -13,8 +13,8 @@ def gas_seasonality_index(*, filter_lzd: bool = True) -> pd.DataFrame:
 
     Args:
         filter_lzd: If True, filters the data for "NTS Energy Offtaken, LDZ Offtake Total".
-        This should always be true for the gas seasonality index calculation, but is provided
-        to measure the impact.
+                    This should always be true for the gas seasonality index calculation, but is provided
+                    to measure the impact.
 
     Returns:
         pd.DataFrame: DataFrame containing the day of the year and the seasonality index.
@@ -63,3 +63,23 @@ def combined_seasonality_index() -> pd.DataFrame:
     gas_df = gas_seasonality_index()
     ele_df = electricity_seasonality_index()
     return gas_df.merge(ele_df, on="day_of_year", suffixes=("_gas", "_electricity"))
+
+
+def get_raw_demand(demand_data: str = "era5") -> pd.DataFrame:
+    """
+    Get raw demand data for analysis.
+
+    Args:
+        demand_data (str): The source of demand data, either "era5" or "espeni".
+
+    Returns:
+        pd.DataFrame: DataFrame with daily demand values.
+
+    Raises:
+        ValueError: If demand_data is not "era5" or "espeni".
+    """
+    if demand_data == "era5":
+        return demand.demand_era5("D")
+    if demand_data == "espeni":
+        return demand.demand_espeni("D")
+    raise ValueError("Invalid demand_data. Choose 'era5' or 'espeni'.")
