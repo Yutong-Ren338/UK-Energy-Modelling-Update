@@ -44,7 +44,7 @@ def get_net_supply(demand_data: str = "era5") -> pd.DataFrame:
         raise ValueError("Invalid demand_data. Choose 'era5' or 'espeni'.")
 
     # scale each year's demand to 2050 demand
-    AVERAGE_YEAR = True
+    AVERAGE_YEAR = True  # noqa: N806
     if AVERAGE_YEAR:
         # Create average year by averaging each day of year across all years
         demand_df["day_of_year"] = demand_df.index.dayofyear
@@ -94,11 +94,11 @@ def fraction_days_without_excess(demand_data: str = "era5", *, return_mean: bool
     Returns:
         pd.Series: A series with renewable capacity as index and the number of days without excess generation as values.
     """
-    # get net demand dataframe (supply - demand)
-    net_demand_df = get_net_demand_dataframe(demand_data)
+    # get net supply dataframe (supply - demand)
+    net_supply_df = get_net_supply(demand_data)
 
-    # count the number of days without excess generation (where net demand is negative)
-    days_without_excess = (net_demand_df < 0).mean(axis=0) if return_mean else (net_demand_df < 0).sum(axis=0)
+    # count the number of days without excess generation (where net supply is negative)
+    days_without_excess = (net_supply_df < 0).mean(axis=0) if return_mean else (net_supply_df < 0).sum(axis=0)
     days_without_excess.index.name = "renewable_capacity_GW"
     days_without_excess.name = "days_without_excess_generation"
 
