@@ -98,7 +98,6 @@ def test_combined_seasonality_index() -> None:
     plt.ylabel("Seasonality Index")
     plt.title("Seasonality Index by Day of Year")
     plt.legend()
-    plt.grid()
 
     # Save the plot as an artifact
     output_dir = Path("tests/output")
