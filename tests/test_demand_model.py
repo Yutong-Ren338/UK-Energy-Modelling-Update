@@ -149,12 +149,12 @@ def test_seasonality_index_continuity() -> None:
 
 def test_demand_scaling_methods() -> None:
     A.CB7EnergyDemand2050Buildings = cb7.buildings_electricity_demand(include_non_residential=True)
-    df = demand_model.get_raw_demand()
+    df = demand_model.historical_electricity_demand()
     df["day_of_year"] = df.index.dayofyear
     average_year = (df.groupby("day_of_year")["demand"].mean() * A.HoursPerDay).astype("pint[terawatt_hour]")
     plt.plot(average_year.index, average_year.values, label="Average Historical Demand")
 
-    df_naive = demand_model.get_raw_demand()
+    df_naive = demand_model.historical_electricity_demand()
     df_naive = demand_model.naive_demand_scaling(df_naive)
     plt.plot(df_naive.index, df_naive.values, label="Naive Demand Scaling")
 

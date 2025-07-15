@@ -7,7 +7,7 @@ from src.data import demand
 from src.utils import rolling_mean_circular
 
 
-def get_raw_demand(demand_data: str = "era5") -> pd.DataFrame:
+def historical_electricity_demand(demand_data: str = "era5") -> pd.DataFrame:
     """
     Get raw demand data for analysis.
 
@@ -74,7 +74,7 @@ def electricity_seasonality_index(demand_data: str = "era5") -> pd.DataFrame:
     Returns:
         pd.DataFrame: DataFrame containing the day of the year and the seasonality index.
     """
-    df = get_raw_demand(demand_data)
+    df = historical_electricity_demand(demand_data)
 
     df["day_of_year"] = df.index.dayofyear
     df = df.groupby("day_of_year")["demand"].mean().reset_index()

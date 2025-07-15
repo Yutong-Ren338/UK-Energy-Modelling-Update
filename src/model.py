@@ -2,7 +2,7 @@ import pandas as pd
 
 import src.assumptions as A
 from src.data import renewable_capacity_factors
-from src.demand_model import get_raw_demand
+from src.demand_model import historical_electricity_demand
 from src.units import Units as U
 
 
@@ -34,7 +34,7 @@ def get_net_supply(demand_data: str = "era5") -> pd.DataFrame:
                       Negative values indicate demand exceeds supply.
     """
     # get demand
-    demand_df = get_raw_demand(demand_data)
+    demand_df = historical_electricity_demand(demand_data)
 
     # scale each year's demand to 2050 demand
     AVERAGE_YEAR = True  # noqa: N806
