@@ -3,17 +3,24 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from config import check
 
-from src import matplotlib_style  # noqa: F401
-from src.demand_model import combined_seasonality_index, electricity_seasonality_index, gas_seasonality_index
+from src import assumptions as A
+from src import (
+    demand_model,
+    matplotlib_style,  # noqa: F401
+)
+from src.data import cb7
 
 # Constants
 DAYS_IN_LEAP_YEAR = 366
 MAX_DAILY_CHANGE = 0.1  # Maximum allowed day-to-day change in seasonality index
 
+OUTPUT_DIR = Path("tests/output")
+OUTPUT_DIR.mkdir(exist_ok=True)
+
 
 def test_gas_seasonality_index() -> None:
     """Test the gas seasonality index calculation."""
-    df = gas_seasonality_index()
+    df = demand_model.gas_seasonality_index()
 
     # Check that we have the right columns
     assert "day_of_year" in df.columns
@@ -41,7 +48,7 @@ def test_gas_seasonality_index() -> None:
 
 def test_electricity_seasonality_index() -> None:
     """Test the electricity seasonality index calculation."""
-    df = electricity_seasonality_index()
+    df = demand_model.electricity_seasonality_index()
 
     # Check that we have the right columns
     assert "day_of_year" in df.columns
@@ -63,7 +70,7 @@ def test_electricity_seasonality_index() -> None:
 
 def test_combined_seasonality_index() -> None:
     """Test the combined seasonality index and create a plot artifact."""
-    df_combined = combined_seasonality_index()
+    df_combined = demand_model.combined_seasonality_index()
 
     # Check that we have the right columns
     assert "day_of_year" in df_combined.columns
@@ -100,16 +107,14 @@ def test_combined_seasonality_index() -> None:
     plt.legend()
 
     # Save the plot as an artifact
-    output_dir = Path("tests/output")
-    output_dir.mkdir(exist_ok=True)
-    plt.savefig(output_dir / "seasonality_index_comparison.png")
+    plt.savefig(OUTPUT_DIR / "seasonality_index_comparison.png")
     plt.close()
 
 
 def test_gas_seasonality_index_filter_lzd() -> None:
     """Test the gas seasonality index with and without LZD filtering."""
-    df_filtered = gas_seasonality_index(filter_lzd=True)
-    df_unfiltered = gas_seasonality_index(filter_lzd=False)
+    df_filtered = demand_model.gas_seasonality_index(filter_lzd=True)
+    df_unfiltered = demand_model.gas_seasonality_index(filter_lzd=False)
 
     # Both should have the same structure
     assert len(df_filtered) == len(df_unfiltered) == DAYS_IN_LEAP_YEAR
@@ -124,7 +129,7 @@ def test_gas_seasonality_index_filter_lzd() -> None:
 
 def test_seasonality_index_continuity() -> None:
     """Test that the seasonality indices are smooth and continuous."""
-    df_combined = combined_seasonality_index()
+    df_combined = demand_model.combined_seasonality_index()
 
     # Check that there are no large jumps in the data (smoothness test)
     gas_diff = df_combined["seasonality_index_gas"].diff().abs()
@@ -140,3 +145,35 @@ def test_seasonality_index_continuity() -> None:
 
     assert gas_circular_diff < MAX_DAILY_CHANGE, f"Gas seasonality not circular: {gas_circular_diff}"
     assert electricity_circular_diff < MAX_DAILY_CHANGE, f"Electricity seasonality not circular: {electricity_circular_diff}"
+
+
+def test_demand_scaling_methods() -> None:
+    A.CB7EnergyDemand2050Buildings = cb7.buildings_electricity_demand(include_non_residential=True)
+    df = demand_model.get_raw_demand()
+    df["day_of_year"] = df.index.dayofyear
+    average_year = (df.groupby("day_of_year")["demand"].mean() * A.HoursPerDay).astype("pint[terawatt_hour]")
+    plt.plot(average_year.index, average_year.values, label="Average Historical Demand")
+
+    df_naive = demand_model.get_raw_demand()
+    df_naive = demand_model.naive_demand_scaling(df_naive)
+    plt.plot(df_naive.index, df_naive.values, label="Naive Demand Scaling")
+
+    df_better = demand_model.demand_scaling()
+    plt.plot(df_better.index, df_better.values, label="Seasonal Demand Scaling")
+
+    df_better = demand_model.demand_scaling(filter_ldz=False)
+    plt.plot(df_better.index, df_better.values, label="Seasonal Demand Scaling (No LDZ Filter)")
+
+    A.CB7EnergyDemand2050Buildings = cb7.buildings_electricity_demand(include_non_residential=False)
+    df_better = demand_model.demand_scaling(filter_ldz=False)
+    plt.plot(df_better.index, df_better.values, label="Seasonal Demand Scaling (+ No Non-Residential)")
+
+    df_better = demand_model.demand_scaling(old_gas_data=True, filter_ldz=False)
+    plt.plot(df_better.index, df_better.values, label="Seasonal Demand Scaling (+ Old gas data)")
+
+    plt.grid()
+    plt.xlabel("Day of Year")
+    plt.ylabel("Electricity Demand (TWh/day)")
+    plt.legend(fontsize=8)
+    plt.savefig(OUTPUT_DIR / "demand_scaling_comparison.png")
+    plt.close()

@@ -15,7 +15,7 @@ HoursPerYear = HoursPerDay * 365.25  # Including leap years
 # PROJECTED DEMAND AND EMISSIONS TARGETS
 # ============================================================================
 
-# EnergyDemand2050 = 575 * U.TWh  # UK energy demand target for 2050 from Rei's thesis  # noqa: ERA001
+# EnergyDemand2050 = 575 * U.TWh  # UK energy demand target for 2050 from Rei's thesis # noqa: ERA001
 CB7EnergyDemand2050 = 682.39 * U.TWh  # Seventh Carbon Budget energy demand target for 2050
 EnergyDemand2050 = CB7EnergyDemand2050
 CB7EnergyDemand2050Buildings = 355.44 * U.TWh  # Seventh Carbon Budget energy demand for buildings in 2050

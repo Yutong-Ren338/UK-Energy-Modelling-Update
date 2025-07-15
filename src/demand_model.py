@@ -27,7 +27,7 @@ def get_raw_demand(demand_data: str = "era5") -> pd.DataFrame:
     raise ValueError("Invalid demand_data. Choose 'era5' or 'espeni'.")
 
 
-def gas_seasonality_index(*, filter_lzd: bool = True) -> pd.DataFrame:
+def gas_seasonality_index(*, filter_lzd: bool = True, old_gas_data: bool = False) -> pd.DataFrame:
     """
     Calculate the gas seasonality index based on daily gas demand data.
 
@@ -35,14 +35,23 @@ def gas_seasonality_index(*, filter_lzd: bool = True) -> pd.DataFrame:
         filter_lzd: If True, filters the data for "NTS Energy Offtaken, LDZ Offtake Total".
                     This should always be true for the gas seasonality index calculation, but is provided
                     to measure the impact.
+        old_gas_data: If True, uses the old gas demand data.
 
     Returns:
         pd.DataFrame: DataFrame containing the day of the year and the seasonality index.
     """
-    df = pd.read_csv(Path(__file__).parent.parent / "data" / "new" / "UK_gas_demand_processed.csv", parse_dates=["date"])
-
-    if filter_lzd:
-        df = df[df["use"] == "NTS Energy Offtaken, LDZ Offtake Total"]
+    data_dir = Path(__file__).parent.parent / "data"
+    if old_gas_data:
+        assert not filter_lzd, "Old data does not support filtering by LZD"
+        df = pd.read_excel(data_dir / "UKGasDemand2018-17Dec23.xlsx", sheet_name="Sheet1")
+        nat_gas_cv = 35.17  # Caloric value of gas in MJ/m3
+        df["demand (TWh)"] = df["UK Total Demand (mcm)"] * nat_gas_cv * 1 / 3600
+        df["date"] = df["Date"]
+        print(df.columns)
+    else:
+        df = pd.read_csv(data_dir / "new" / "UK_gas_demand_processed.csv", parse_dates=["date"])
+        if filter_lzd:
+            df = df[df["use"] == "NTS Energy Offtaken, LDZ Offtake Total"]
 
     df["demand (TWh)"] = df["demand (TWh)"].astype("pint[terawatt_hour]")
 
@@ -76,20 +85,20 @@ def electricity_seasonality_index(demand_data: str = "era5") -> pd.DataFrame:
     return df[["day_of_year", "seasonality_index"]]
 
 
-def combined_seasonality_index(demand_data: str = "era5", *, filter_ldz: bool = True) -> pd.DataFrame:
+def combined_seasonality_index(demand_data: str = "era5", *, old_gas_data: bool = False, filter_ldz: bool = True) -> pd.DataFrame:
     """
     Combine the gas and electricity seasonality indices into a single DataFrame.
 
     Args:
         demand_data (str): The source of demand data, either "era5" or "espeni".
+        old_gas_data (bool): If True, uses the old gas demand data. This should be False (just for testing).
         filter_ldz (bool): If True, filters the gas data for "NTS Energy Offtaken, LDZ Offtake Total".
-                           This should always be true for the gas seasonality index calculation, but is provided
-                           to measure the impact.
+                           This should always be true (just for testing).
 
     Returns:
         pd.DataFrame: DataFrame containing the day of the year, gas seasonality index, and electricity seasonality index.
     """
-    gas_df = gas_seasonality_index(filter_lzd=filter_ldz)
+    gas_df = gas_seasonality_index(old_gas_data=old_gas_data, filter_lzd=filter_ldz)
     ele_df = electricity_seasonality_index(demand_data=demand_data)
     return gas_df.merge(ele_df, on="day_of_year", suffixes=("_gas", "_electricity"))
 
@@ -117,22 +126,22 @@ def naive_demand_scaling(df: pd.DataFrame) -> pd.DataFrame:
     return average_year * A.EnergyDemand2050 / 365 / average_year.mean()
 
 
-def demand_scaling(demand_data: str = "era5", *, filter_ldz: bool = True) -> pd.DataFrame:
+def demand_scaling(demand_data: str = "era5", *, old_gas_data: bool = False, filter_ldz: bool = True) -> pd.DataFrame:
     """
     Scale the demand data to 2050 levels, taking into account increased seasonality from electrification
     of space heating and hot water.
 
     Args:
         demand_data (str): The source of demand data, either "era5" or "espeni".
-        filter_ldx (bool): If True, filters the gas data for "NTS Energy Offtaken, LDZ Offtake Total".
-                           This should always be true for the gas seasonality index calculation, but is provided
-                           to measure the impact.
+        old_gas_data (bool): If True, uses the old gas demand data. This should be False (just for testing).
+        filter_ldz (bool): If True, filters the gas data for "NTS Energy Offtaken, LDZ Offtake Total".
+                           This should always be true (just for testing).
 
     Returns:
         pd.DataFrame: DataFrame with daily demand values scaled to 2050 levels.
     """
 
-    df_combined = combined_seasonality_index(demand_data=demand_data, filter_ldz=filter_ldz)
+    df_combined = combined_seasonality_index(demand_data=demand_data, old_gas_data=old_gas_data, filter_ldz=filter_ldz)
 
     total_2050_heat_demand = A.CB7EnergyDemand2050Buildings * A.CB7FractionHeatDemandBuildings
     daily_2050_heat_demand = total_2050_heat_demand / 365
@@ -141,7 +150,7 @@ def demand_scaling(demand_data: str = "era5", *, filter_ldz: bool = True) -> pd.
     daily_heating_demand = daily_2050_heat_demand * df_combined["seasonality_index_gas"]
 
     # daily non-heating demand
-    non_heating_demand = A.CB7EnergyDemand2050 - total_2050_heat_demand
+    non_heating_demand = A.EnergyDemand2050 - total_2050_heat_demand
     daily_non_heating_demand = non_heating_demand / 365 * df_combined["seasonality_index_electricity"]
 
     # add in the rest of the demand
