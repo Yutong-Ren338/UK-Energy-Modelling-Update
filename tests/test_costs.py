@@ -7,6 +7,6 @@ from src.units import Units as U
 
 def test_nuclear_cost_contribution() -> None:
     nuclear_cost = yearly_cost(capacity=A.Nuclear.Capacity, capacity_factor=A.Nuclear.CapacityFactor, lcoe=A.Nuclear.AverageLCOE)
-    cost_constribution = nuclear_cost / A.EnergyDemand2050
-    expected = 12.84 * U.GBP / U.MWh
+    cost_constribution = nuclear_cost / A.EnergyDemand2050.to(U.MWh)
+    expected = 10.82 * U.GBP / U.MWh
     check(cost_constribution, expected)

@@ -38,9 +38,12 @@ def frac_heat_demand_from_buildings() -> float:
     return heating_demand / total_demand
 
 
-def buildings_electricity_demand() -> float:
+def buildings_electricity_demand(*, include_non_residential: bool = True) -> float:
     """
     Calculate the total electricity demand for UK residential and non-residential buildings in 2050 in TWh.
+
+    Args:
+        include_non_residential (bool): If True, includes non-residential buildings in the calculation.
 
     Returns:
         float: Total electricity demand for buildings in 2050 in TWh.
@@ -50,7 +53,10 @@ def buildings_electricity_demand() -> float:
     df = df[df["scenario"] == "Balanced Pathway"]
     df = df[df["country"] == "United Kingdom"]
     df = df[df["year"] == TARGET_YEAR]
-    df = df[(df["sector"] == "Residential buildings") | (df["sector"] == "Non-residential buildings")]
+    sectors = ["Residential buildings"]
+    if include_non_residential:
+        sectors = ["Residential buildings", "Non-residential buildings"]
+    df = df[df["sector"].isin(sectors)]
     df = df[df["variable"] == "Energy: final demand electricity"]
     return df["value"].sum() * U.TWh
 

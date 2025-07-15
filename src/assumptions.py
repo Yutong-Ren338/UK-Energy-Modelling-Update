@@ -8,14 +8,16 @@ from src.units import Units as U
 # PHYSICAL CONSTANTS
 # ============================================================================
 MolecularWeightCO2 = 44.01  # g/mol
-HoursPerYear = 24 * 365.25 * U.h  # Including leap years
+HoursPerDay = 24 * U.h
+HoursPerYear = HoursPerDay * 365.25  # Including leap years
 
 # ============================================================================
 # PROJECTED DEMAND AND EMISSIONS TARGETS
 # ============================================================================
 
-EnergyDemand2050 = 575 * U.TWh  # UK energy demand target for 2050
+# EnergyDemand2050 = 575 * U.TWh  # UK energy demand target for 2050 from Rei's thesis  # noqa: ERA001
 CB7EnergyDemand2050 = 682.39 * U.TWh  # Seventh Carbon Budget energy demand target for 2050
+EnergyDemand2050 = CB7EnergyDemand2050
 CB7EnergyDemand2050Buildings = 355.44 * U.TWh  # Seventh Carbon Budget energy demand for buildings in 2050
 CB7FractionHeatDemandBuildings = 0.597  # Fraction of energy demand from buildings that is for heating in 2050
 
