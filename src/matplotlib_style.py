@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 plt.rcParams["figure.figsize"] = (5, 3)
 plt.rcParams["figure.constrained_layout.use"] = True
-plt.rcParams["figure.dpi"] = 120
+plt.rcParams["figure.dpi"] = 150
 # plt.rcParams["font.family"] = "serif"
 plt.rcParams["axes.grid"] = True
 # plt.rcParams["axes.grid.axis"] = "y"

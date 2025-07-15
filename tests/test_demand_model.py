@@ -171,7 +171,6 @@ def test_demand_scaling_methods() -> None:
     df_better = demand_model.demand_scaling(old_gas_data=True, filter_ldz=False)
     plt.plot(df_better.index, df_better.values, label="Seasonal Demand Scaling (+ Old gas data)")
 
-    plt.grid()
     plt.xlabel("Day of Year")
     plt.ylabel("Electricity Demand (TWh/day)")
     plt.legend(fontsize=8)
