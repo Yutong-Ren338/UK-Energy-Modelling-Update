@@ -42,6 +42,8 @@ def preprocess_gas_data(input_filename: str, output_filename: str) -> None:
 
     Keeps only 'Applicable For', 'Data Item', and 'Value' columns,
     and converts values from kWh to TWh by dividing by 10^9.
+    If output file exists, appends new data and removes duplicates,
+    keeping newer data for overlapping dates.
 
     Args:
         input_filename (str): Path to the input CSV file
@@ -63,8 +65,16 @@ def preprocess_gas_data(input_filename: str, output_filename: str) -> None:
     # Covert 'date' to datetime
     df_processed["date"] = pd.to_datetime(df_processed["date"], dayfirst=True)
 
+    # Prepend if output file already exists
+    output_path = Path(output_filename)
+    if output_path.exists():
+        existing_df = pd.read_csv(output_filename)
+        existing_df["date"] = pd.to_datetime(existing_df["date"])
+        combined_df = pd.concat([df_processed, existing_df], ignore_index=True)
+        df_processed = combined_df.drop_duplicates(subset=["date", "use"], keep="last")
+
     # Create output directory
-    Path(output_filename).parent.mkdir(parents=True, exist_ok=True)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Save the processed data
     df_processed.to_csv(output_filename, index=False)
