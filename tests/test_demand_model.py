@@ -3,6 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from config import check
 
+from src import matplotlib_style  # noqa: F401
 from src.demand_model import combined_seasonality_index, electricity_seasonality_index, gas_seasonality_index
 
 # Constants
