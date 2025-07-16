@@ -1,0 +1,108 @@
+"""Tests for the storage model simulation."""
+
+from pathlib import Path
+
+import pandas as pd
+import pytest
+
+from src.storage_model import STORAGE_MAX_CAPACITY, analyze_simulation_results, run_simulation
+from tests.config import check
+
+# Test constants
+
+MAX_DAC_DAILY_ENERGY = 27.0 * 24 / 1000  # 0.648 TWh per day
+
+
+class TestStorageModel:
+    """Test class for storage model functionality."""
+
+    @pytest.fixture
+    def sample_data(self) -> pd.DataFrame:
+        """Load the test data for simulations.
+
+        Returns:
+            DataFrame containing test simulation data.
+        """
+        test_data_path = Path(__file__).parent / "rei_net_supply_df_12gw_nuclear.csv"
+        return pd.read_csv(test_data_path)
+
+    def test_run_simulation_with_expected_outputs(self, sample_data: pd.DataFrame) -> None:
+        """Test that the simulation produces expected outputs for the standard test case."""
+        # Run the simulation
+        net_supply_df = run_simulation(sample_data)
+
+        # Analyze results
+        results = analyze_simulation_results(net_supply_df)
+
+        # Check that the expected outputs match the documented values
+        # (with some tolerance for floating point precision)
+        expected_values = {
+            "minimum_storage": 20.16927245757229,
+            "annual_dac_energy": 38.47911516786211,
+            "dac_capacity_factor": 0.19,  # 19.0%
+            "annual_unused_energy": 46.846621471892654,
+        }
+        check(results["minimum_storage"], expected_values["minimum_storage"])
+        check(results["annual_dac_energy"], expected_values["annual_dac_energy"])
+        check(results["dac_capacity_factor"], expected_values["dac_capacity_factor"])
+        check(results["annual_unused_energy"], expected_values["annual_unused_energy"])
+
+    def test_simulation_creates_expected_columns(self, sample_data: pd.DataFrame) -> None:
+        """Test that the simulation creates the expected columns in the output DataFrame."""
+        net_supply_df = run_simulation(sample_data)
+
+        # Check that expected columns exist for 250GW renewable capacity
+        expected_columns = ["L (TWh),RC=250GW", "R_ccs (TWh),RC=250GW", "R_dac (TWh),RC=250GW", "R_unused (TWh),RC=250GW"]
+
+        for col in expected_columns:
+            assert col in net_supply_df.columns, f"Expected column {col} not found"
+
+    def test_simulation_physical_constraints(self, sample_data: pd.DataFrame) -> None:
+        """Test that simulation results satisfy physical constraints."""
+        net_supply_df = run_simulation(sample_data)
+
+        # Check storage level constraints
+        storage_col = "L (TWh),RC=250GW"
+        assert (net_supply_df[storage_col] >= 0).all(), "Storage levels cannot be negative"
+        assert (net_supply_df[storage_col] <= STORAGE_MAX_CAPACITY).all(), "Storage levels cannot exceed maximum capacity"
+
+        # Check that residual energies are non-negative
+        residual_col = "R_ccs (TWh),RC=250GW"
+        dac_col = "R_dac (TWh),RC=250GW"
+        unused_col = "R_unused (TWh),RC=250GW"
+
+        assert (net_supply_df[residual_col] >= 0).all(), "Residual energy cannot be negative"
+        assert (net_supply_df[dac_col] >= 0).all(), "DAC energy cannot be negative"
+        assert (net_supply_df[unused_col] >= 0).all(), "Unused energy cannot be negative"
+
+        # Check DAC capacity constraint
+        assert (net_supply_df[dac_col] <= MAX_DAC_DAILY_ENERGY).all(), "DAC energy cannot exceed daily capacity"
+
+    def test_analyze_simulation_results_structure(self, sample_data: pd.DataFrame) -> None:
+        """Test that analyze_simulation_results returns expected structure."""
+        net_supply_df = run_simulation(sample_data)
+        results = analyze_simulation_results(net_supply_df)
+
+        # Check that all expected keys are present
+        expected_keys = {"minimum_storage", "annual_dac_energy", "dac_capacity_factor", "annual_unused_energy"}
+
+        assert set(results.keys()) == expected_keys, "Results dictionary missing expected keys"
+
+        # Check value types and ranges
+        assert isinstance(results["minimum_storage"], float)
+        assert isinstance(results["annual_dac_energy"], float)
+        assert isinstance(results["dac_capacity_factor"], float)
+        assert isinstance(results["annual_unused_energy"], float)
+
+        # Check capacity factor is a valid percentage
+        assert 0 <= results["dac_capacity_factor"] <= 1, "DAC capacity factor should be between 0 and 1"
+
+    def test_simulation_with_custom_renewable_capacity(self, sample_data: pd.DataFrame) -> None:
+        """Test that analyze_simulation_results works with custom renewable capacity."""
+        # This test assumes the data has multiple renewable capacities
+        # For now, we'll just test that the function doesn't crash with the default
+        net_supply_df = run_simulation(sample_data)
+        results = analyze_simulation_results(net_supply_df, renewable_capacity=250)
+
+        assert results is not None
+        assert isinstance(results, dict)
