@@ -19,20 +19,21 @@ class SimulationColumns(NamedTuple):
     unused_energy: str
 
 
-e_in = 0.74  # electrolysis
-e_out = 0.55  # electricity generation from hydrogen
+# Use efficiency values from assumptions
+e_in = A.HydrogenStorage.Electrolysis.Efficiency  # electrolysis
+e_out = A.HydrogenStorage.Generation.Efficiency  # electricity generation from hydrogen
 
 # === SYSTEM PARAMETERS ===
 # Storage system
-STORAGE_MAX_CAPACITY = 71.0 * U.TWh
+STORAGE_MAX_CAPACITY = A.HydrogenStorage.CavernStorage.MaxCapacity
 INITIAL_STORAGE_LEVEL = STORAGE_MAX_CAPACITY  # Start with full storage
 
 # Electrolyser system (converts excess energy to stored energy)
-ELECTROLYSER_POWER = 50 * U.GW
+ELECTROLYSER_POWER = A.HydrogenStorage.Electrolysis.Power
 ELECTROLYSER_MAX_DAILY_ENERGY = (ELECTROLYSER_POWER * A.HoursPerDay).to(U.TWh)
 
 # Direct Air Capture system
-DAC_CAPACITY_GW = 27.0 * U.GW
+DAC_CAPACITY_GW = A.DAC.Capacity
 DAC_MAX_DAILY_ENERGY = (DAC_CAPACITY_GW * A.HoursPerDay).to(U.TWh)
 
 # Allow DAC and Electrolysis to operate on the same day
