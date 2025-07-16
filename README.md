@@ -3,9 +3,11 @@
 This repository contains the Python codes and datasets for the UK Energy Model, which is used in the MSci report.
 
 
-### Related work
+### Data Sources
 
-See also [src/data/README.md](src/data/README.md) for data sources.
+See [src/data/README.md](src/data/README.md) for data sources.
+
+### Related work
 
 - [Large-scale electricity storage](https://royalsociety.org/news-resources/projects/low-carbon-energy-programme/large-scale-electricity-storage/)
 - Modelling the UK’s 2050 Energy System with Carbon Dioxide Removal - Rei Suzuki 2025
