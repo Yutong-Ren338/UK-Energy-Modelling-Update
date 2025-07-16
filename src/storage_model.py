@@ -35,8 +35,7 @@ ELECTROLYSER_MAX_DAILY_ENERGY = (ELECTROLYSER_POWER * A.HoursPerDay).to(U.TWh)
 DAC_CAPACITY_GW = 27.0 * U.GW
 DAC_MAX_DAILY_ENERGY = (DAC_CAPACITY_GW * A.HoursPerDay).to(U.TWh)
 
-# Renewable capacity scenarios to analyze
-RENEWABLE_CAPACITIES = [250 * U.GW]
+# Allow DAC and Electrolysis to operate on the same day
 ONLY_DAC_IF_STORAGE_FULL = True
 
 # use floats for comparisons for speed
@@ -140,7 +139,7 @@ def run_simulation(net_supply_df: pd.DataFrame, renewable_capacity: int) -> pd.D
     )
 
     # Get supply-demand values as numpy array for faster processing
-    supply_demand_values = df[supply_demand_col].to_numpy()
+    supply_demand_values = df[supply_demand_col].astype(float).to_numpy()
     n_timesteps = len(supply_demand_values)
 
     # Initialize result arrays
