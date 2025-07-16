@@ -1,4 +1,10 @@
+from pathlib import Path
+
 import numpy as np
+
+# test artifacts
+OUTPUT_DIR = Path("tests/output")
+OUTPUT_DIR.mkdir(exist_ok=True)
 
 # Tolerances for floating point comparisons
 ABSOLUTE_TOLERANCE = 1e-3

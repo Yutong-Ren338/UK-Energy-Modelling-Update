@@ -1,8 +1,8 @@
 import pandas as pd
 
 import src.assumptions as A
+from src import demand_model
 from src.data import renewable_capacity_factors
-from src.demand_model import historical_electricity_demand
 from src.units import Units as U
 
 
@@ -19,7 +19,8 @@ def daily_renewables_capacity(renewable_capacity: float, capacity_factors: pd.Da
     solar = renewable_capacity * A.Renewables.CapacityRatios.Solar * capacity_factors["solar"]
     offshore_wind = renewable_capacity * A.Renewables.CapacityRatios.OffshoreWind * capacity_factors["offshore"]
     onshore_wind = renewable_capacity * A.Renewables.CapacityRatios.OnshoreWind * capacity_factors["onshore"]
-    return solar + offshore_wind + onshore_wind + A.Nuclear.Capacity * A.Nuclear.CapacityFactor
+    total_power = solar + offshore_wind + onshore_wind + A.Nuclear.Capacity * A.Nuclear.CapacityFactor
+    return (total_power * A.HoursPerDay).astype("pint[TWh]")
 
 
 def get_net_supply(demand_data: str = "era5") -> pd.DataFrame:
@@ -34,33 +35,18 @@ def get_net_supply(demand_data: str = "era5") -> pd.DataFrame:
                       Negative values indicate demand exceeds supply.
     """
     # get demand
-    demand_df = historical_electricity_demand(demand_data)
+    raw_demand_df = demand_model.historical_electricity_demand(demand_data)
+    # demand_df = demand_model.demand_scaling(demand_data=demand_data)
+    demand_df = demand_model.naive_demand_scaling(raw_demand_df)
 
-    # scale each year's demand to 2050 demand
-    AVERAGE_YEAR = True  # noqa: N806
-    if AVERAGE_YEAR:
-        # Create average year by averaging each day of year across all years
-        demand_df["day_of_year"] = demand_df.index.dayofyear
-        average_year = demand_df.groupby("day_of_year")["demand"].mean()
+    # Repeat the average year to match the original dataframe length
+    num_years = len(raw_demand_df) // len(demand_df)
+    remaining_days = len(raw_demand_df) % len(demand_df)
 
-        # Scale the average year to 2050 demand
-        demand_2050 = (A.EnergyDemand2050 / A.HoursPerYear).to(U.GW)
-        average_year_scaled = average_year * demand_2050 / average_year.mean()
-
-        # Repeat the average year to match the original dataframe length
-        num_years = len(demand_df) // len(average_year)
-        remaining_days = len(demand_df) % len(average_year)
-
-        # Create repeated pattern
-        repeated_demand = pd.concat([average_year_scaled] * num_years + [average_year_scaled.iloc[:remaining_days]])
-        repeated_demand.index = demand_df.index
-        demand_df["demand"] = repeated_demand.to_numpy()
-
-    else:
-        demand_df["year"] = demand_df.index.year
-        demand_df["yearly_demand"] = demand_df.groupby("year")["demand"].transform("mean")
-        demand_2050 = (A.EnergyDemand2050 / A.HoursPerYear).to(U.GW)
-        demand_df["demand"] *= demand_2050 / demand_df["yearly_demand"]
+    # Create repeated pattern
+    repeated_demand = pd.concat([demand_df] * num_years + [demand_df.iloc[:remaining_days]])
+    repeated_demand.index = raw_demand_df.index
+    raw_demand_df["demand"] = repeated_demand
 
     # get output for a range of renewable capacities
     daily_capacity_factors = renewable_capacity_factors.get_renewable_capacity_factors(resample="D")
@@ -68,12 +54,12 @@ def get_net_supply(demand_data: str = "era5") -> pd.DataFrame:
     supply_df = pd.DataFrame({capacity.magnitude: daily_renewables_capacity(capacity, daily_capacity_factors) for capacity in renewable_capacities})
 
     # reindex for subtraction
-    common_idx = supply_df.index.intersection(demand_df.index)
+    common_idx = supply_df.index.intersection(raw_demand_df.index)
     supply_df = supply_df.reindex(common_idx)
-    demand_df = demand_df.reindex(common_idx)
+    raw_demand_df = raw_demand_df.reindex(common_idx)
 
     # subtract the demand from the renewable generation to get the net demand
-    return supply_df.sub(demand_df["demand"], axis=0)
+    return supply_df.sub(raw_demand_df["demand"], axis=0)
 
 
 def fraction_days_without_excess(demand_data: str = "era5", *, return_mean: bool = True) -> pd.Series:

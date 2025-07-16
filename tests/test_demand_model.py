@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import matplotlib.pyplot as plt
 from config import check
 
@@ -9,13 +7,11 @@ from src import (
     matplotlib_style,  # noqa: F401
 )
 from src.data import cb7
+from tests.config import OUTPUT_DIR
 
 # Constants
 DAYS_IN_LEAP_YEAR = 366
 MAX_DAILY_CHANGE = 0.1  # Maximum allowed day-to-day change in seasonality index
-
-OUTPUT_DIR = Path("tests/output")
-OUTPUT_DIR.mkdir(exist_ok=True)
 
 
 def test_gas_seasonality_index() -> None:
