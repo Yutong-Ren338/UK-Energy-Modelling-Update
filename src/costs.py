@@ -38,9 +38,9 @@ def total_storage_cost(
     Returns:
         float: Total cost of energy storage in GBP.
     """
-    storage_cost = storage_capacity * A.Storage.AnnualisedCost
-    electrolyser_cost = electrolyser_power * A.Electrolysis.AnnualisedCost
-    generation_cost = generation_capacity * A.Generation.AnnualisedCost
+    storage_cost = storage_capacity * A.HydrogenStorage.CavernStorage.AnnualisedCost
+    electrolyser_cost = electrolyser_power * A.HydrogenStorage.Electrolysis.AnnualisedCost
+    generation_cost = generation_capacity * A.HydrogenStorage.Generation.AnnualisedCost
     return (storage_cost + electrolyser_cost + generation_cost).to(U.GBP)
 
 

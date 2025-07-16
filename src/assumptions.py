@@ -128,42 +128,43 @@ class Nuclear:
 # ============================================================================
 # HYDROGEN STORAGE
 # ============================================================================
-class Electrolysis:
-    """Parameters for hydrogen generation via electrolysis"""
+class HydrogenStorage:
+    """Parameters for hydrogen energy storage system including electrolysis, cavern storage, and generation"""
 
-    # Source: IEA via RS report
+    class Electrolysis:
+        """Parameters for hydrogen generation via electrolysis"""
 
-    Efficiency = 0.74  # Converting electrical energy to hydrogen
-    Capex = 450 / GBPToUSD * U.GBP / U.kW
-    Opex = Capex * 0.015
-    Lifetime = 30  # years
+        # Source: IEA via RS report
 
-    AnnualisedCost = annualised_cost(Capex, Opex, Lifetime, DiscountRate)
+        Efficiency = 0.74  # Converting electrical energy to hydrogen
+        Capex = 450 / GBPToUSD * U.GBP / U.kW
+        Opex = Capex * 0.015
+        Lifetime = 30  # years
 
+        AnnualisedCost = annualised_cost(Capex, Opex, Lifetime, DiscountRate)
 
-class Storage:
-    """Parameters for large-scale hydrogen storage"""
+    class CavernStorage:
+        """Parameters for large-scale hydrogen storage in underground caverns"""
 
-    # For Capex, H21 NOE assumes £325M for 1.22 TWh. CS Smith et al (2023)
-    # take the midpoint of 1-2x this number, which is £399.59M per TWh.
+        # For Capex, H21 NOE assumes £325M for 1.22 TWh. CS Smith et al (2023)
+        # take the midpoint of 1-2x this number, which is £399.59M per TWh.
 
-    Efficiency = 0.407  # Round-trip efficiency (electrolysis * generation efficiencies
-    Capex = 400 * U.GBP / U.MWh
-    Opex = Capex * 0.015
-    Lifetime = 30  # years
+        Efficiency = 0.407  # Round-trip efficiency (electrolysis * generation efficiencies
+        Capex = 400 * U.GBP / U.MWh
+        Opex = Capex * 0.015
+        Lifetime = 30  # years
 
-    AnnualisedCost = annualised_cost(Capex, Opex, Lifetime, DiscountRate)
+        AnnualisedCost = annualised_cost(Capex, Opex, Lifetime, DiscountRate)
 
+    class Generation:
+        """Parameters for electricity generation from stored hydrogen"""
 
-class Generation:
-    """Parameters for electricity generation from stored hydrogen"""
+        Efficiency = 0.55  # Converting stored hydrogen back to electricity
+        Capex = 425 / GBPToUSD * U.GBP / U.kW
+        Opex = Capex * 0.015
+        Lifetime = 30  # years
 
-    Efficiency = 0.55  # Converting stored hydrogen back to electricity
-    Capex = 425 / GBPToUSD * U.GBP / U.kW
-    Opex = Capex * 0.015
-    Lifetime = 30  # years
-
-    AnnualisedCost = annualised_cost(Capex, Opex, Lifetime, DiscountRate)
+        AnnualisedCost = annualised_cost(Capex, Opex, Lifetime, DiscountRate)
 
 
 # ============================================================================
