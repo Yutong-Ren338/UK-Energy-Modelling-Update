@@ -1,6 +1,10 @@
 from typing import NamedTuple
 
+import numpy as np
 import pandas as pd
+
+import src.assumptions as A
+from src.units import Units as U
 
 # Energy Storage and DAC (Direct Air Capture) Simulation
 # Models energy storage filling/emptying and allocation of excess energy to DAC
@@ -20,25 +24,98 @@ e_out = 0.55  # electricity generation from hydrogen
 
 # === SYSTEM PARAMETERS ===
 # Storage system
-STORAGE_MAX_CAPACITY = 71.0  # TWh
+STORAGE_MAX_CAPACITY = 71.0 * U.TWh
 INITIAL_STORAGE_LEVEL = STORAGE_MAX_CAPACITY  # Start with full storage
 
 # Electrolyser system (converts excess energy to stored energy)
-ELECTROLYSER_POWER = 50  # GW
-ELECTROLYSER_MAX_DAILY_ENERGY = ELECTROLYSER_POWER * 24 / 1000  # TWh per day
+ELECTROLYSER_POWER = 50 * U.GW
+ELECTROLYSER_MAX_DAILY_ENERGY = (ELECTROLYSER_POWER * A.HoursPerDay).to(U.TWh)
 
 # Direct Air Capture system
-DAC_CAPACITY_GW = 27.0  # GW
-DAC_MAX_DAILY_ENERGY = DAC_CAPACITY_GW * 24 / 1000  # TWh per day
+DAC_CAPACITY_GW = 27.0 * U.GW
+DAC_MAX_DAILY_ENERGY = (DAC_CAPACITY_GW * A.HoursPerDay).to(U.TWh)
 
 # Renewable capacity scenarios to analyze
-RENEWABLE_CAPACITIES = [250]  # GW
+RENEWABLE_CAPACITIES = [250 * U.GW]
 ONLY_DAC_IF_STORAGE_FULL = True
+
+# use floats for comparisons for speed
+STORAGE_MAX_CAPACITY_MAG = STORAGE_MAX_CAPACITY.magnitude
+INITIAL_STORAGE_LEVEL_MAG = INITIAL_STORAGE_LEVEL.magnitude
+ELECTROLYSER_POWER_MAG = ELECTROLYSER_POWER.magnitude
+ELECTROLYSER_MAX_DAILY_ENERGY_MAG = ELECTROLYSER_MAX_DAILY_ENERGY.magnitude
+DAC_CAPACITY_GW_MAG = DAC_CAPACITY_GW.magnitude
+DAC_MAX_DAILY_ENERGY_MAG = DAC_MAX_DAILY_ENERGY.magnitude
+
+
+def _process_timestep(supply_demand: float, prev_storage: float) -> tuple[float, float, float, float]:
+    """
+    Process a single timestep of the simulation.
+
+    Args:
+        supply_demand: Energy supply minus demand for this timestep
+        prev_storage: Storage level from previous timestep
+
+    Returns:
+        Tuple of (storage_level, residual_energy, dac_energy, unused_energy)
+    """
+    if supply_demand <= 0:
+        # Energy shortage - draw from storage
+        available_from_storage = prev_storage * e_out
+        if supply_demand + available_from_storage <= 0:
+            # Not enough storage to meet demand
+            return 0.0, 0.0, 0.0, 0.0
+
+        # Partial storage draw
+        energy_drawn = -supply_demand / e_out
+        return prev_storage - energy_drawn, 0.0, 0.0, 0.0
+
+    # Energy surplus - store energy first, then allocate excess to DAC
+    return _process_energy_surplus_timestep(supply_demand, prev_storage)
+
+
+def _process_energy_surplus_timestep(supply_demand: float, prev_storage: float) -> tuple[float, float, float, float]:
+    """
+    Process a timestep with energy surplus.
+
+    Args:
+        supply_demand: Energy supply minus demand for this timestep
+        prev_storage: Storage level from previous timestep
+
+    Returns:
+        Tuple of (storage_level, residual_energy, dac_energy, unused_energy)
+    """
+    energy_available_for_electrolyser = min(supply_demand, ELECTROLYSER_MAX_DAILY_ENERGY_MAG)
+    energy_to_store = energy_available_for_electrolyser * e_in
+
+    if ONLY_DAC_IF_STORAGE_FULL:
+        storage_space_available = STORAGE_MAX_CAPACITY_MAG - prev_storage
+
+        if energy_to_store <= storage_space_available:
+            # All energy can be stored
+            return prev_storage + energy_to_store, 0.0, 0.0, 0.0
+
+        # Storage gets filled, excess energy available for DAC
+        energy_used_for_storage = storage_space_available / e_in
+        residual_energy_val = supply_demand - energy_used_for_storage
+        dac_energy_val = min(residual_energy_val, DAC_MAX_DAILY_ENERGY_MAG)
+
+        return (STORAGE_MAX_CAPACITY_MAG, residual_energy_val, dac_energy_val, residual_energy_val - dac_energy_val)
+
+    # Alternative allocation strategy
+    new_storage_level = min(prev_storage + energy_to_store, STORAGE_MAX_CAPACITY_MAG)
+    actual_energy_stored = (new_storage_level - prev_storage) / e_in
+    residual_energy_val = supply_demand - actual_energy_stored
+    dac_energy_val = min(residual_energy_val, DAC_MAX_DAILY_ENERGY_MAG) if residual_energy_val > 0 else 0.0
+
+    return (new_storage_level, residual_energy_val, dac_energy_val, residual_energy_val - dac_energy_val)
 
 
 def run_simulation(net_supply_df: pd.DataFrame, renewable_capacity: int) -> pd.DataFrame:
     """
     Run energy storage simulation for a single renewable capacity scenario.
+
+    Optimized vectorized version that avoids slow .loc assignments in loops.
 
     Args:
         net_supply_df: DataFrame containing supply-demand data
@@ -62,78 +139,31 @@ def run_simulation(net_supply_df: pd.DataFrame, renewable_capacity: int) -> pd.D
         unused_energy=f"R_unused (TWh),RC={renewable_capacity}GW",
     )
 
-    # Initialize result columns
-    df[columns.storage_level] = 0.0
-    df[columns.residual_energy] = 0.0
-    df[columns.dac_energy] = 0.0
-    df[columns.unused_energy] = 0.0
+    # Get supply-demand values as numpy array for faster processing
+    supply_demand_values = df[supply_demand_col].to_numpy()
+    n_timesteps = len(supply_demand_values)
 
-    # === PROCESS ALL TIME STEPS ===
-    for i in range(len(df)):
-        supply_demand = df.loc[i, supply_demand_col]
-        prev_storage = INITIAL_STORAGE_LEVEL if i == 0 else df.loc[i - 1, columns.storage_level]
+    # Initialize result arrays
+    results = np.zeros((n_timesteps, 4))  # storage, residual, dac, unused
 
-        if supply_demand <= 0:
-            # Energy shortage - draw from storage
-            _process_energy_shortage(df, i, supply_demand, prev_storage, columns.storage_level)
-        else:
-            # Energy surplus - store energy first, then allocate excess to DAC
-            _process_energy_surplus(df, i, supply_demand, prev_storage, columns)
+    # Process each timestep
+    prev_storage = INITIAL_STORAGE_LEVEL_MAG
+
+    for i in range(n_timesteps):
+        storage_level, residual_energy, dac_energy, unused_energy = _process_timestep(supply_demand_values[i], prev_storage)
+        results[i] = [storage_level, residual_energy, dac_energy, unused_energy]
+        prev_storage = storage_level
+
+    # Assign results back to DataFrame with proper units
+    df[columns.storage_level] = pd.Series(results[:, 0], dtype="pint[TWh]")
+    df[columns.residual_energy] = pd.Series(results[:, 1], dtype="pint[TWh]")
+    df[columns.dac_energy] = pd.Series(results[:, 2], dtype="pint[TWh]")
+    df[columns.unused_energy] = pd.Series(results[:, 3], dtype="pint[TWh]")
 
     # === VALIDATE RESULTS ===
     _validate_simulation_results(df, columns)
 
     return df
-
-
-def _process_energy_shortage(df: pd.DataFrame, i: int, supply_demand: float, prev_storage: float, storage_level_col: str) -> None:
-    """Process time step with energy shortage (negative supply-demand)."""
-    available_from_storage = prev_storage * e_out
-
-    if supply_demand + available_from_storage <= 0:
-        # Not enough storage to meet demand
-        df.loc[i, storage_level_col] = 0.0
-    else:
-        # Partial storage draw
-        energy_drawn = -supply_demand / e_out
-        df.loc[i, storage_level_col] = prev_storage - energy_drawn
-
-
-def _process_energy_surplus(df: pd.DataFrame, i: int, supply_demand: float, prev_storage: float, columns: SimulationColumns) -> None:
-    """Process time step with energy surplus (positive supply-demand)."""
-    energy_available_for_electrolyser = min(supply_demand, ELECTROLYSER_MAX_DAILY_ENERGY)
-    energy_to_store = energy_available_for_electrolyser * e_in
-
-    if ONLY_DAC_IF_STORAGE_FULL:
-        storage_space_available = STORAGE_MAX_CAPACITY - prev_storage
-
-        if energy_to_store <= storage_space_available:
-            # All energy can be stored
-            df.loc[i, columns.storage_level] = prev_storage + energy_to_store
-            df.loc[i, columns.residual_energy] = 0.0
-            df.loc[i, columns.dac_energy] = 0.0
-            df.loc[i, columns.unused_energy] = 0.0
-        else:
-            # Storage gets filled, excess energy available for DAC
-            energy_used_for_storage = storage_space_available / e_in
-            residual_energy = supply_demand - energy_used_for_storage
-            dac_energy = min(residual_energy, DAC_MAX_DAILY_ENERGY)
-
-            df.loc[i, columns.storage_level] = STORAGE_MAX_CAPACITY
-            df.loc[i, columns.residual_energy] = residual_energy
-            df.loc[i, columns.dac_energy] = dac_energy
-            df.loc[i, columns.unused_energy] = residual_energy - dac_energy
-    else:
-        # Alternative allocation strategy
-        new_storage_level = min(prev_storage + energy_to_store, STORAGE_MAX_CAPACITY)
-        actual_energy_stored = (new_storage_level - prev_storage) / e_in
-        residual_energy = supply_demand - actual_energy_stored
-        dac_energy = min(residual_energy, DAC_MAX_DAILY_ENERGY) if residual_energy > 0 else 0.0
-
-        df.loc[i, columns.storage_level] = new_storage_level
-        df.loc[i, columns.residual_energy] = residual_energy
-        df.loc[i, columns.dac_energy] = dac_energy
-        df.loc[i, columns.unused_energy] = residual_energy - dac_energy
 
 
 def _validate_simulation_results(df: pd.DataFrame, columns: SimulationColumns) -> None:
@@ -156,18 +186,17 @@ def analyze_simulation_results(net_supply_df: pd.DataFrame, renewable_capacity: 
     Returns:
         Dictionary containing analysis metrics
     """
-    if renewable_capacity is None:
-        renewable_capacity = RENEWABLE_CAPACITIES[0]
 
     # Define column names
-    storage_column = f"L (TWh),RC={renewable_capacity}GW"
-    dac_column = f"R_dac (TWh),RC={renewable_capacity}GW"
-    unused_column = f"R_unused (TWh),RC={renewable_capacity}GW"
+    storage_column = f"L (TWh),RC={int(renewable_capacity)}GW"
+    dac_column = f"R_dac (TWh),RC={int(renewable_capacity)}GW"
+    unused_column = f"R_unused (TWh),RC={int(renewable_capacity)}GW"
 
     # Calculate key metrics
     min_storage = net_supply_df[storage_column].min()
     annual_dac_energy = net_supply_df[dac_column].mean() * 365
-    dac_capacity_factor = (net_supply_df[dac_column] > 0).mean()
+    # Calculate capacity factor as actual usage vs maximum possible daily energy
+    dac_capacity_factor = (net_supply_df[dac_column] > 0).mean()  # TODO: improve this calculation
     annual_unused_energy = net_supply_df[unused_column].mean() * 365
 
     return {

@@ -4,13 +4,11 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+from pint import Quantity
 
-from src.storage_model import STORAGE_MAX_CAPACITY, analyze_simulation_results, run_simulation
+from src.storage_model import DAC_MAX_DAILY_ENERGY, STORAGE_MAX_CAPACITY, analyze_simulation_results, run_simulation
+from src.units import Units as U
 from tests.config import check
-
-# Test constants
-
-MAX_DAC_DAILY_ENERGY = 27.0 * 24 / 1000  # 0.648 TWh per day
 
 
 class TestStorageModel:
@@ -32,15 +30,15 @@ class TestStorageModel:
         net_supply_df = run_simulation(sample_data, renewable_capacity=250)
 
         # Analyze results
-        results = analyze_simulation_results(net_supply_df)
+        results = analyze_simulation_results(net_supply_df, renewable_capacity=250)
 
         # Check that the expected outputs match the documented values
         # (with some tolerance for floating point precision)
         expected_values = {
-            "minimum_storage": 20.16927245757229,
-            "annual_dac_energy": 38.47911516786211,
+            "minimum_storage": 20.16927245757229 * U.TWh,
+            "annual_dac_energy": 38.47911516786211 * U.TWh,
             "dac_capacity_factor": 0.19,  # 19.0%
-            "annual_unused_energy": 46.846621471892654,
+            "annual_unused_energy": 46.846621471892654 * U.TWh,
         }
         check(results["minimum_storage"], expected_values["minimum_storage"])
         check(results["annual_dac_energy"], expected_values["annual_dac_energy"])
@@ -76,12 +74,12 @@ class TestStorageModel:
         assert (net_supply_df[unused_col] >= 0).all(), "Unused energy cannot be negative"
 
         # Check DAC capacity constraint
-        assert (net_supply_df[dac_col] <= MAX_DAC_DAILY_ENERGY).all(), "DAC energy cannot exceed daily capacity"
+        assert (net_supply_df[dac_col] <= DAC_MAX_DAILY_ENERGY).all(), "DAC energy cannot exceed daily capacity"
 
     def test_analyze_simulation_results_structure(self, sample_data: pd.DataFrame) -> None:
         """Test that analyze_simulation_results returns expected structure."""
         net_supply_df = run_simulation(sample_data, renewable_capacity=250)
-        results = analyze_simulation_results(net_supply_df)
+        results = analyze_simulation_results(net_supply_df, renewable_capacity=250)
 
         # Check that all expected keys are present
         expected_keys = {"minimum_storage", "annual_dac_energy", "dac_capacity_factor", "annual_unused_energy"}
@@ -89,10 +87,10 @@ class TestStorageModel:
         assert set(results.keys()) == expected_keys, "Results dictionary missing expected keys"
 
         # Check value types and ranges
-        assert isinstance(results["minimum_storage"], float)
-        assert isinstance(results["annual_dac_energy"], float)
+        assert isinstance(results["minimum_storage"], Quantity)
+        assert isinstance(results["annual_dac_energy"], Quantity)
         assert isinstance(results["dac_capacity_factor"], float)
-        assert isinstance(results["annual_unused_energy"], float)
+        assert isinstance(results["annual_unused_energy"], Quantity)
 
         # Check capacity factor is a valid percentage
         assert 0 <= results["dac_capacity_factor"] <= 1, "DAC capacity factor should be between 0 and 1"
