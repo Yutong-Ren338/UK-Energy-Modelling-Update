@@ -44,21 +44,18 @@ def run_simulation(net_supply_df: pd.DataFrame) -> None:
 
         # === PROCESS ALL TIME STEPS ===
         for i in range(len(net_supply_df)):
-            supply_demand = net_supply_df[supply_demand_col][i]
-            prev_storage = INITIAL_STORAGE_LEVEL if i == 0 else net_supply_df[storage_level_col][i - 1]
-            print("prev_storage, prev_storage", prev_storage, "s-d", supply_demand)
+            supply_demand = net_supply_df.loc[i, supply_demand_col]
+            prev_storage = INITIAL_STORAGE_LEVEL if i == 0 else net_supply_df.loc[i - 1, storage_level_col]
             if supply_demand <= 0:
-                print("Energy shortage or balance condition")
                 # Energy shortage - draw from storage
                 available_from_storage = prev_storage * e_out
                 if supply_demand + available_from_storage <= 0:
-                    net_supply_df[storage_level_col][i] = 0
+                    net_supply_df.loc[i, storage_level_col] = 0
                 else:
                     energy_drawn = -supply_demand / e_out
-                    net_supply_df[storage_level_col][i] = prev_storage - energy_drawn
+                    net_supply_df.loc[i, storage_level_col] = prev_storage - energy_drawn
 
             else:
-                print("Energy surplus condition")
                 # Energy surplus - store energy first, then allocate excess to DAC only if storage is full
                 energy_available_for_electrolyser = min(supply_demand, ELECTROLYSER_MAX_DAILY_ENERGY)
                 energy_to_store = energy_available_for_electrolyser * e_in
@@ -69,19 +66,19 @@ def run_simulation(net_supply_df: pd.DataFrame) -> None:
 
                     if energy_to_store <= storage_space_available:
                         # All energy can be stored, no DAC needed
-                        net_supply_df[storage_level_col][i] = prev_storage + energy_to_store
-                        net_supply_df[residual_energy_col][i] = 0
-                        net_supply_df[dac_energy_col][i] = 0
+                        net_supply_df.loc[i, storage_level_col] = prev_storage + energy_to_store
+                        net_supply_df.loc[i, residual_energy_col] = 0
+                        net_supply_df.loc[i, dac_energy_col] = 0
                     else:
                         # Storage gets filled, excess energy available for DAC
                         energy_used_for_storage = storage_space_available / e_in
                         residual_energy = supply_demand - energy_used_for_storage
                         dac_energy = min(residual_energy, DAC_MAX_DAILY_ENERGY)
 
-                        net_supply_df[storage_level_col][i] = STORAGE_MAX_CAPACITY
-                        net_supply_df[residual_energy_col][i] = residual_energy
-                        net_supply_df[dac_energy_col][i] = dac_energy
-                        net_supply_df[unused_energy_col][i] = residual_energy - dac_energy
+                        net_supply_df.loc[i, storage_level_col] = STORAGE_MAX_CAPACITY
+                        net_supply_df.loc[i, residual_energy_col] = residual_energy
+                        net_supply_df.loc[i, dac_energy_col] = dac_energy
+                        net_supply_df.loc[i, unused_energy_col] = residual_energy - dac_energy
 
                 else:
                     # Calculate new storage level
@@ -95,10 +92,10 @@ def run_simulation(net_supply_df: pd.DataFrame) -> None:
                     dac_energy = min(residual_energy, DAC_MAX_DAILY_ENERGY) if residual_energy > 0 else 0
 
                     # Update results
-                    net_supply_df[storage_level_col][i] = new_storage_level
-                    net_supply_df[residual_energy_col][i] = residual_energy
-                    net_supply_df[dac_energy_col][i] = dac_energy
-                    net_supply_df[unused_energy_col][i] = residual_energy - dac_energy
+                    net_supply_df.loc[i, storage_level_col] = new_storage_level
+                    net_supply_df.loc[i, residual_energy_col] = residual_energy
+                    net_supply_df.loc[i, dac_energy_col] = dac_energy
+                    net_supply_df.loc[i, unused_energy_col] = residual_energy - dac_energy
 
     # === CHECK RESULTS ===
     assert (net_supply_df[residual_energy_col] >= 0).all(), "Residual energy cannot be negative"
