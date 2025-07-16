@@ -23,12 +23,13 @@ def daily_renewables_capacity(renewable_capacity: float, capacity_factors: pd.Da
     return (total_power * A.HoursPerDay).astype("pint[TWh]")
 
 
-def get_net_supply(demand_data: str = "era5") -> pd.DataFrame:
+def get_net_supply(demand_data: str = "era5", *, naive_demand_scaling: bool = False) -> pd.DataFrame:
     """
     Get net supply dataframe (supply minus demand) for analysis.
 
     Args:
         demand_data (str): The source of demand data, either "era5" or "espeni".
+        naive_demand_scaling (bool): If True, use naive demand scaling; otherwise, use seasonal demand scaling.
 
     Returns:
         pd.DataFrame: DataFrame with renewable capacity as columns and daily net demand (supply - demand) as values.
@@ -36,8 +37,7 @@ def get_net_supply(demand_data: str = "era5") -> pd.DataFrame:
     """
     # get demand
     raw_demand_df = demand_model.historical_electricity_demand(demand_data)
-    # demand_df = demand_model.demand_scaling(demand_data=demand_data)
-    demand_df = demand_model.naive_demand_scaling(raw_demand_df)
+    demand_df = demand_model.naive_demand_scaling(raw_demand_df) if naive_demand_scaling else demand_model.demand_scaling(demand_data=demand_data)
 
     # Repeat the average year to match the original dataframe length
     num_years = len(raw_demand_df) // len(demand_df)
