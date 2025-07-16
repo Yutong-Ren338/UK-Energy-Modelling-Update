@@ -29,7 +29,7 @@ class TestStorageModel:
     def test_run_simulation_with_expected_outputs(self, sample_data: pd.DataFrame) -> None:
         """Test that the simulation produces expected outputs for the standard test case."""
         # Run the simulation
-        net_supply_df = run_simulation(sample_data)
+        net_supply_df = run_simulation(sample_data, renewable_capacity=250)
 
         # Analyze results
         results = analyze_simulation_results(net_supply_df)
@@ -49,7 +49,7 @@ class TestStorageModel:
 
     def test_simulation_creates_expected_columns(self, sample_data: pd.DataFrame) -> None:
         """Test that the simulation creates the expected columns in the output DataFrame."""
-        net_supply_df = run_simulation(sample_data)
+        net_supply_df = run_simulation(sample_data, renewable_capacity=250)
 
         # Check that expected columns exist for 250GW renewable capacity
         expected_columns = ["L (TWh),RC=250GW", "R_ccs (TWh),RC=250GW", "R_dac (TWh),RC=250GW", "R_unused (TWh),RC=250GW"]
@@ -59,7 +59,7 @@ class TestStorageModel:
 
     def test_simulation_physical_constraints(self, sample_data: pd.DataFrame) -> None:
         """Test that simulation results satisfy physical constraints."""
-        net_supply_df = run_simulation(sample_data)
+        net_supply_df = run_simulation(sample_data, renewable_capacity=250)
 
         # Check storage level constraints
         storage_col = "L (TWh),RC=250GW"
@@ -80,7 +80,7 @@ class TestStorageModel:
 
     def test_analyze_simulation_results_structure(self, sample_data: pd.DataFrame) -> None:
         """Test that analyze_simulation_results returns expected structure."""
-        net_supply_df = run_simulation(sample_data)
+        net_supply_df = run_simulation(sample_data, renewable_capacity=250)
         results = analyze_simulation_results(net_supply_df)
 
         # Check that all expected keys are present
@@ -99,10 +99,33 @@ class TestStorageModel:
 
     def test_simulation_with_custom_renewable_capacity(self, sample_data: pd.DataFrame) -> None:
         """Test that analyze_simulation_results works with custom renewable capacity."""
-        # This test assumes the data has multiple renewable capacities
-        # For now, we'll just test that the function doesn't crash with the default
-        net_supply_df = run_simulation(sample_data)
-        results = analyze_simulation_results(net_supply_df, renewable_capacity=250)
+        # Test with different renewable capacities
+        net_supply_df = run_simulation(sample_data, renewable_capacity=300)
+        results = analyze_simulation_results(net_supply_df, renewable_capacity=300)
 
         assert results is not None
         assert isinstance(results, dict)
+
+        # Test that the simulation creates the correct columns for custom capacity
+        expected_columns = ["L (TWh),RC=300GW", "R_ccs (TWh),RC=300GW", "R_dac (TWh),RC=300GW", "R_unused (TWh),RC=300GW"]
+        for col in expected_columns:
+            assert col in net_supply_df.columns, f"Expected column {col} not found"
+
+    def test_multiple_renewable_capacities(self, sample_data: pd.DataFrame) -> None:
+        """Test that the function works correctly when called multiple times with different capacities."""
+        capacities = [200, 250, 300]
+        all_results = {}
+
+        for capacity in capacities:
+            net_supply_df = run_simulation(sample_data, renewable_capacity=capacity)
+            results = analyze_simulation_results(net_supply_df, renewable_capacity=capacity)
+            all_results[capacity] = results
+
+            # Verify that each capacity produces valid results
+            assert results["minimum_storage"] >= 0
+            assert results["annual_dac_energy"] >= 0
+            assert 0 <= results["dac_capacity_factor"] <= 1
+            assert results["annual_unused_energy"] >= 0
+
+        # Verify that different capacities produce different results
+        assert len(set(r["minimum_storage"] for r in all_results.values())) > 1, "Different capacities should produce different results"
