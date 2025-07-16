@@ -7,5 +7,5 @@
 | Renewables.ninja | Renewable capacity factors. Includes breakdown by onshore and offshore wind which is not included in the ERA5 dataset | [Website](https://www.renewables.ninja/) |
 | GitHub (benmcwilliams) | Daily gas demand data (this is being rescraped in this repo) | [Repository](https://github.com/benmcwilliams/gas-demand) |
 | NTS | National Transmission System gas demand data | [Website](https://data.nationalgas.com/) |
-| CCC | Various assumptions including 2050 demand | [Report](https://www.theccc.org.uk/publication/the-seventh-carbon-budget/) |
-| CCC | Hourly electricity demand data | [Methodology Report](https://www.theccc.org.uk/publication/methodology-report-uk-northern-ireland-wales-and-scotland-carbon-budget-advice/) |
+| CCC CB7 | Various assumptions including 2050 demand | [Report](https://www.theccc.org.uk/publication/the-seventh-carbon-budget/) |
+| CCC CB7 | Hourly electricity demand data | [Methodology Report](https://www.theccc.org.uk/publication/methodology-report-uk-northern-ireland-wales-and-scotland-carbon-budget-advice/) |
