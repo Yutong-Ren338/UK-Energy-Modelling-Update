@@ -62,19 +62,20 @@ def get_net_supply(demand_data: str = "era5", *, naive_demand_scaling: bool = Fa
     return supply_df.sub(raw_demand_df["demand"], axis=0)
 
 
-def fraction_days_without_excess(demand_data: str = "era5", *, return_mean: bool = True) -> pd.Series:
+def fraction_days_without_excess(demand_data: str = "era5", *, return_mean: bool = True, naive_demand_scaling: bool = False) -> pd.Series:
     """
     Calculate the fraction of days without excess renewable generation for a range of renewable capacities.
 
     Args:
         demand_data (str): The source of demand data, either "era5" or "espeni".
         return_mean (bool): If True, return the mean fraction of days without excess generation.
+        naive_demand_scaling (bool): If True, use naive demand scaling; otherwise, use seasonal demand scaling.
 
     Returns:
         pd.Series: A series with renewable capacity as index and the number of days without excess generation as values.
     """
     # get net supply dataframe (supply - demand)
-    net_supply_df = get_net_supply(demand_data)
+    net_supply_df = get_net_supply(demand_data, naive_demand_scaling=naive_demand_scaling)
 
     # count the number of days without excess generation (where net supply is negative)
     days_without_excess = (net_supply_df < 0).mean(axis=0) if return_mean else (net_supply_df < 0).sum(axis=0)
