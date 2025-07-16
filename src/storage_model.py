@@ -19,209 +19,226 @@ class SimulationColumns(NamedTuple):
     unused_energy: str
 
 
-# Use efficiency values from assumptions
-e_in = A.HydrogenStorage.Electrolysis.Efficiency  # electrolysis
-e_out = A.HydrogenStorage.Generation.Efficiency  # electricity generation from hydrogen
+class StorageModel:
+    """Energy storage simulation model with configurable parameters."""
 
-# === SYSTEM PARAMETERS ===
-# Storage system
-STORAGE_MAX_CAPACITY = A.HydrogenStorage.CavernStorage.MaxCapacity
-INITIAL_STORAGE_LEVEL = STORAGE_MAX_CAPACITY  # Start with full storage
+    def __init__(
+        self,
+        renewable_capacity: int,
+        max_storage_capacity: float,
+        electrolyser_power: float,
+        dac_capacity: float,
+        *,
+        only_dac_if_storage_full: bool = True,
+    ) -> None:
+        """
+        Initialize the storage model with required parameters.
 
-# Electrolyser system (converts excess energy to stored energy)
-ELECTROLYSER_POWER = A.HydrogenStorage.Electrolysis.Power
-ELECTROLYSER_MAX_DAILY_ENERGY = (ELECTROLYSER_POWER * A.HoursPerDay).to(U.TWh)
+        Args:
+            renewable_capacity: Renewable capacity in GW
+            max_storage_capacity: Maximum storage capacity in TWh
+            electrolyser_power: Electrolyser power in GW
+            dac_capacity: DAC capacity in GW
+            only_dac_if_storage_full: Whether DAC only operates when storage is full
+        """
 
-# Direct Air Capture system
-DAC_CAPACITY_GW = A.DAC.Capacity
-DAC_MAX_DAILY_ENERGY = (DAC_CAPACITY_GW * A.HoursPerDay).to(U.TWh)
+        # check pint units before running
+        assert renewable_capacity.units == U.GW, "Renewable capacity must be in GW"
+        assert max_storage_capacity.units == U.TWh, "Max storage capacity must be in TWh"
+        assert electrolyser_power.units == U.GW, "Electrolyser power must be in GW"
+        assert dac_capacity.units == U.GW, "DAC capacity must be in GW"
 
-# Allow DAC and Electrolysis to operate on the same day
-ONLY_DAC_IF_STORAGE_FULL = True
+        self.renewable_capacity = renewable_capacity.magnitude
 
-# use floats for comparisons for speed
-STORAGE_MAX_CAPACITY_MAG = STORAGE_MAX_CAPACITY.magnitude
-INITIAL_STORAGE_LEVEL_MAG = INITIAL_STORAGE_LEVEL.magnitude
-ELECTROLYSER_POWER_MAG = ELECTROLYSER_POWER.magnitude
-ELECTROLYSER_MAX_DAILY_ENERGY_MAG = ELECTROLYSER_MAX_DAILY_ENERGY.magnitude
-DAC_CAPACITY_GW_MAG = DAC_CAPACITY_GW.magnitude
-DAC_MAX_DAILY_ENERGY_MAG = DAC_MAX_DAILY_ENERGY.magnitude
+        # Use efficiency values from assumptions
+        self.e_in = A.HydrogenStorage.Electrolysis.Efficiency
+        self.e_out = A.HydrogenStorage.Generation.Efficiency
 
+        # Set storage parameters (store as magnitudes)
+        self.max_storage_capacity = max_storage_capacity.magnitude
+        self.initial_storage_level = self.max_storage_capacity  # Start with full storage
 
-def _process_timestep(supply_demand: float, prev_storage: float) -> tuple[float, float, float, float]:
-    """
-    Process a single timestep of the simulation.
+        # Set electrolyser parameters (store as magnitudes)
+        self.electrolyser_power = electrolyser_power.magnitude
+        self.electrolyser_max_daily_energy = (electrolyser_power * A.HoursPerDay).to(U.TWh).magnitude
 
-    Args:
-        supply_demand: Energy supply minus demand for this timestep
-        prev_storage: Storage level from previous timestep
+        # Set DAC parameters
+        self.dac_capacity = dac_capacity.magnitude
+        self.dac_max_daily_energy = (dac_capacity * A.HoursPerDay).to(U.TWh).magnitude
+        self.only_dac_if_storage_full = only_dac_if_storage_full
 
-    Returns:
-        Tuple of (storage_level, residual_energy, dac_energy, unused_energy)
-    """
-    if supply_demand <= 0:
-        # Energy shortage - draw from storage
-        available_from_storage = prev_storage * e_out
-        if supply_demand + available_from_storage <= 0:
-            # Not enough storage to meet demand
-            return 0.0, 0.0, 0.0, 0.0
+    def _process_timestep(self, supply_demand: float, prev_storage: float) -> tuple[float, float, float, float]:
+        """
+        Process a single timestep of the simulation.
 
-        # Partial storage draw
-        energy_drawn = -supply_demand / e_out
-        return prev_storage - energy_drawn, 0.0, 0.0, 0.0
+        Args:
+            supply_demand: Energy supply minus demand for this timestep
+            prev_storage: Storage level from previous timestep
 
-    # Energy surplus - store energy first, then allocate excess to DAC
-    return _process_energy_surplus_timestep(supply_demand, prev_storage)
+        Returns:
+            Tuple of (storage_level, residual_energy, dac_energy, unused_energy)
+        """
+        if supply_demand <= 0:
+            # Energy shortage - draw from storage
+            available_from_storage = prev_storage * self.e_out
+            if supply_demand + available_from_storage <= 0:
+                # Not enough storage to meet demand
+                return 0.0, 0.0, 0.0, 0.0
 
+            # Partial storage draw
+            energy_drawn = -supply_demand / self.e_out
+            return prev_storage - energy_drawn, 0.0, 0.0, 0.0
 
-def _process_energy_surplus_timestep(supply_demand: float, prev_storage: float) -> tuple[float, float, float, float]:
-    """
-    Process a timestep with energy surplus.
+        # Energy surplus - store energy first, then allocate excess to DAC
+        return self._process_energy_surplus_timestep(supply_demand, prev_storage)
 
-    Args:
-        supply_demand: Energy supply minus demand for this timestep
-        prev_storage: Storage level from previous timestep
+    def _process_energy_surplus_timestep(self, supply_demand: float, prev_storage: float) -> tuple[float, float, float, float]:
+        """
+        Process a timestep with energy surplus.
 
-    Returns:
-        Tuple of (storage_level, residual_energy, dac_energy, unused_energy)
-    """
-    energy_available_for_electrolyser = min(supply_demand, ELECTROLYSER_MAX_DAILY_ENERGY_MAG)
-    energy_to_store = energy_available_for_electrolyser * e_in
+        Args:
+            supply_demand: Energy supply minus demand for this timestep
+            prev_storage: Storage level from previous timestep
 
-    if ONLY_DAC_IF_STORAGE_FULL:
-        storage_space_available = STORAGE_MAX_CAPACITY_MAG - prev_storage
+        Returns:
+            Tuple of (storage_level, residual_energy, dac_energy, unused_energy)
+        """
+        energy_available_for_electrolyser = min(supply_demand, self.electrolyser_max_daily_energy)
+        energy_to_store = energy_available_for_electrolyser * self.e_in
 
-        if energy_to_store <= storage_space_available:
-            # All energy can be stored
-            return prev_storage + energy_to_store, 0.0, 0.0, 0.0
+        if self.only_dac_if_storage_full:
+            storage_space_available = self.max_storage_capacity - prev_storage
 
-        # Storage gets filled, excess energy available for DAC
-        energy_used_for_storage = storage_space_available / e_in
-        residual_energy_val = supply_demand - energy_used_for_storage
-        dac_energy_val = min(residual_energy_val, DAC_MAX_DAILY_ENERGY_MAG)
+            if energy_to_store <= storage_space_available:
+                # All energy can be stored
+                return prev_storage + energy_to_store, 0.0, 0.0, 0.0
 
-        return (STORAGE_MAX_CAPACITY_MAG, residual_energy_val, dac_energy_val, residual_energy_val - dac_energy_val)
+            # Storage gets filled, excess energy available for DAC
+            energy_used_for_storage = storage_space_available / self.e_in
+            residual_energy_val = supply_demand - energy_used_for_storage
+            dac_energy_val = min(residual_energy_val, self.dac_max_daily_energy)
 
-    # Alternative allocation strategy
-    new_storage_level = min(prev_storage + energy_to_store, STORAGE_MAX_CAPACITY_MAG)
-    actual_energy_stored = (new_storage_level - prev_storage) / e_in
-    residual_energy_val = supply_demand - actual_energy_stored
-    dac_energy_val = min(residual_energy_val, DAC_MAX_DAILY_ENERGY_MAG) if residual_energy_val > 0 else 0.0
+            return (self.max_storage_capacity, residual_energy_val, dac_energy_val, residual_energy_val - dac_energy_val)
 
-    return (new_storage_level, residual_energy_val, dac_energy_val, residual_energy_val - dac_energy_val)
+        # Alternative allocation strategy
+        new_storage_level = min(prev_storage + energy_to_store, self.max_storage_capacity)
+        actual_energy_stored = (new_storage_level - prev_storage) / self.e_in
+        residual_energy_val = supply_demand - actual_energy_stored
+        dac_energy_val = min(residual_energy_val, self.dac_max_daily_energy) if residual_energy_val > 0 else 0.0
 
+        return (new_storage_level, residual_energy_val, dac_energy_val, residual_energy_val - dac_energy_val)
 
-def run_simulation(net_supply_df: pd.DataFrame, renewable_capacity: int) -> pd.DataFrame:
-    """
-    Run energy storage simulation for a single renewable capacity scenario.
+    def run_simulation(self, net_supply_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Run energy storage simulation for this renewable capacity scenario.
 
-    Optimized vectorized version that avoids slow .loc assignments in loops.
+        Optimized vectorized version that avoids slow .loc assignments in loops.
 
-    Args:
-        net_supply_df: DataFrame containing supply-demand data
-        renewable_capacity: Renewable capacity in GW
+        Args:
+            net_supply_df: DataFrame containing supply-demand data
 
-    Returns:
-        DataFrame with simulation results added as new columns
-    """
-    # Create a copy to avoid modifying the original DataFrame
-    df = net_supply_df.copy()
+        Returns:
+            DataFrame with simulation results added as new columns
+        """
+        # Create a copy to avoid modifying the original DataFrame
+        df = net_supply_df.copy()
 
-    # Define column names for this renewable capacity scenario
-    supply_demand_col = renewable_capacity
-    if supply_demand_col not in df.columns:
-        supply_demand_col = f"S-D(TWh),Ren={renewable_capacity}GW"
+        # Define column names for this renewable capacity scenario
+        supply_demand_col = self.renewable_capacity
+        if supply_demand_col not in df.columns:
+            supply_demand_col = f"S-D(TWh),Ren={self.renewable_capacity}GW"
 
-    columns = SimulationColumns(
-        storage_level=f"L (TWh),RC={renewable_capacity}GW",
-        residual_energy=f"R_ccs (TWh),RC={renewable_capacity}GW",
-        dac_energy=f"R_dac (TWh),RC={renewable_capacity}GW",
-        unused_energy=f"R_unused (TWh),RC={renewable_capacity}GW",
-    )
+        columns = SimulationColumns(
+            storage_level=f"L (TWh),RC={self.renewable_capacity}GW",
+            residual_energy=f"R_ccs (TWh),RC={self.renewable_capacity}GW",
+            dac_energy=f"R_dac (TWh),RC={self.renewable_capacity}GW",
+            unused_energy=f"R_unused (TWh),RC={self.renewable_capacity}GW",
+        )
 
-    # Get supply-demand values as numpy array for faster processing
-    supply_demand_values = df[supply_demand_col].astype(float).to_numpy()
-    n_timesteps = len(supply_demand_values)
+        # Get supply-demand values as numpy array for faster processing
+        supply_demand_values = df[supply_demand_col].astype(float).to_numpy()
+        n_timesteps = len(supply_demand_values)
 
-    # Initialize result arrays
-    results = np.zeros((n_timesteps, 4))  # storage, residual, dac, unused
+        # Initialize result arrays
+        results = np.zeros((n_timesteps, 4))  # storage, residual, dac, unused
 
-    # Process each timestep
-    prev_storage = INITIAL_STORAGE_LEVEL_MAG
+        # Process each timestep
+        prev_storage = self.initial_storage_level
 
-    for i in range(n_timesteps):
-        storage_level, residual_energy, dac_energy, unused_energy = _process_timestep(supply_demand_values[i], prev_storage)
-        results[i] = [storage_level, residual_energy, dac_energy, unused_energy]
-        prev_storage = storage_level
+        for i in range(n_timesteps):
+            storage_level, residual_energy, dac_energy, unused_energy = self._process_timestep(supply_demand_values[i], prev_storage)
+            results[i] = [storage_level, residual_energy, dac_energy, unused_energy]
+            prev_storage = storage_level
 
-    # Assign results back to DataFrame with proper units
-    df[columns.storage_level] = pd.Series(results[:, 0], dtype="pint[TWh]")
-    df[columns.residual_energy] = pd.Series(results[:, 1], dtype="pint[TWh]")
-    df[columns.dac_energy] = pd.Series(results[:, 2], dtype="pint[TWh]")
-    df[columns.unused_energy] = pd.Series(results[:, 3], dtype="pint[TWh]")
+        # Assign results back to DataFrame with proper units
+        df[columns.storage_level] = pd.Series(results[:, 0], dtype="pint[TWh]")
+        df[columns.residual_energy] = pd.Series(results[:, 1], dtype="pint[TWh]")
+        df[columns.dac_energy] = pd.Series(results[:, 2], dtype="pint[TWh]")
+        df[columns.unused_energy] = pd.Series(results[:, 3], dtype="pint[TWh]")
 
-    # === VALIDATE RESULTS ===
-    _validate_simulation_results(df, columns)
+        # === VALIDATE RESULTS ===
+        self._validate_simulation_results(df, columns)
 
-    return df
+        return df
 
+    def _validate_simulation_results(self, df: pd.DataFrame, columns: SimulationColumns) -> None:
+        """Validate simulation results to ensure physical constraints are met."""
+        assert (df[columns.residual_energy] >= 0).all(), "Residual energy cannot be negative"
+        assert (df[columns.unused_energy] >= 0).all(), "Unused energy cannot be negative"
+        assert (df[columns.storage_level] <= self.max_storage_capacity * U.TWh).all(), "Storage levels cannot exceed maximum capacity"
+        assert (df[columns.dac_energy] <= self.dac_max_daily_energy * U.TWh).all(), "DAC energy cannot exceed its maximum daily capacity"
+        assert (df[columns.storage_level] >= 0).all(), "Storage levels cannot be negative"
 
-def _validate_simulation_results(df: pd.DataFrame, columns: SimulationColumns) -> None:
-    """Validate simulation results to ensure physical constraints are met."""
-    assert (df[columns.residual_energy] >= 0).all(), "Residual energy cannot be negative"
-    assert (df[columns.unused_energy] >= 0).all(), "Unused energy cannot be negative"
-    assert (df[columns.storage_level] <= STORAGE_MAX_CAPACITY).all(), "Storage levels cannot exceed maximum capacity"
-    assert (df[columns.dac_energy] <= DAC_MAX_DAILY_ENERGY).all(), "DAC energy cannot exceed its maximum daily capacity"
-    assert (df[columns.storage_level] >= 0).all(), "Storage levels cannot be negative"
+    def analyze_simulation_results(self, net_supply_df: pd.DataFrame) -> dict:
+        """
+        Analyze simulation results and return key metrics.
 
+        Args:
+            net_supply_df: DataFrame containing simulation results
 
-def analyze_simulation_results(net_supply_df: pd.DataFrame, renewable_capacity: int | None = None) -> dict:
-    """
-    Analyze simulation results and return key metrics.
+        Returns:
+            Dictionary containing analysis metrics
+        """
 
-    Args:
-        net_supply_df: DataFrame containing simulation results
-        renewable_capacity: Renewable capacity in GW (defaults to first capacity in RENEWABLE_CAPACITIES)
+        # Define column names
+        storage_column = f"L (TWh),RC={int(self.renewable_capacity)}GW"
+        dac_column = f"R_dac (TWh),RC={int(self.renewable_capacity)}GW"
+        unused_column = f"R_unused (TWh),RC={int(self.renewable_capacity)}GW"
 
-    Returns:
-        Dictionary containing analysis metrics
-    """
+        # Calculate key metrics
+        min_storage = net_supply_df[storage_column].min()
+        annual_dac_energy = net_supply_df[dac_column].mean() * 365
+        # Calculate capacity factor as actual usage vs maximum possible daily energy
+        dac_capacity_factor = (net_supply_df[dac_column] > 0).mean()  # Simplified calculation based on operating days
+        annual_unused_energy = net_supply_df[unused_column].mean() * 365
 
-    # Define column names
-    storage_column = f"L (TWh),RC={int(renewable_capacity)}GW"
-    dac_column = f"R_dac (TWh),RC={int(renewable_capacity)}GW"
-    unused_column = f"R_unused (TWh),RC={int(renewable_capacity)}GW"
+        return {
+            "minimum_storage": min_storage,
+            "annual_dac_energy": annual_dac_energy,
+            "dac_capacity_factor": dac_capacity_factor,
+            "annual_unused_energy": annual_unused_energy,
+        }
 
-    # Calculate key metrics
-    min_storage = net_supply_df[storage_column].min()
-    annual_dac_energy = net_supply_df[dac_column].mean() * 365
-    # Calculate capacity factor as actual usage vs maximum possible daily energy
-    dac_capacity_factor = (net_supply_df[dac_column] > 0).mean()  # TODO: improve this calculation
-    annual_unused_energy = net_supply_df[unused_column].mean() * 365
-
-    return {
-        "minimum_storage": min_storage,
-        "annual_dac_energy": annual_dac_energy,
-        "dac_capacity_factor": dac_capacity_factor,
-        "annual_unused_energy": annual_unused_energy,
-    }
-
-
-def print_simulation_results(results: dict) -> None:
-    """Print simulation results in a formatted way."""
-    print(f"minimum storage is {results['minimum_storage']}")
-    print(f"DAC energy is {results['annual_dac_energy']}")
-    print(f"DAC Capacity Factor is {results['dac_capacity_factor']:.1%}")
-    print(f"Curtailed energy is {results['annual_unused_energy']}")
+    @staticmethod
+    def print_simulation_results(results: dict) -> None:
+        """Print simulation results in a formatted way."""
+        print(f"minimum storage is {results['minimum_storage']}")
+        print(f"DAC energy is {results['annual_dac_energy']}")
+        print(f"DAC Capacity Factor is {results['dac_capacity_factor']:.1%}")
+        print(f"Curtailed energy is {results['annual_unused_energy']}")
 
 
 # Example usage
 if __name__ == "__main__":
     df = pd.read_csv("tests/rei_net_supply_df_12gw_nuclear.csv")
 
-    # Run simulation for each renewable capacity
-    for capacity in RENEWABLE_CAPACITIES:
-        print(f"\n=== Renewable Capacity: {capacity} GW ===")
-        net_supply_df = run_simulation(df, capacity)
-        results = analyze_simulation_results(net_supply_df, capacity)
-        print_simulation_results(results)
+    # Example: Run simulation with required parameters for 250 GW renewable capacity
+    model = StorageModel(
+        renewable_capacity=250 * U.GW,
+        max_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
+        electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
+        dac_capacity=A.DAC.Capacity,
+    )
+    net_supply_df = model.run_simulation(df)
+    results = model.analyze_simulation_results(net_supply_df)
+    model.print_simulation_results(results)

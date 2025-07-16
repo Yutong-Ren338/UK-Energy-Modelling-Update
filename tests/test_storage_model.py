@@ -6,9 +6,17 @@ import pandas as pd
 import pytest
 from pint import Quantity
 
-from src.storage_model import DAC_MAX_DAILY_ENERGY, STORAGE_MAX_CAPACITY, analyze_simulation_results, run_simulation
+import src.assumptions as A
+from src.storage_model import StorageModel
 from src.units import Units as U
 from tests.config import check
+
+SIMULATION_KWARGS = {
+    "renewable_capacity": 250 * U.GW,  # Default renewable capacity for the simulation
+    "max_storage_capacity": A.HydrogenStorage.CavernStorage.MaxCapacity,  # Maximum storage capacity
+    "electrolyser_power": A.HydrogenStorage.Electrolysis.Power,  # Electrolyser power capacity
+    "dac_capacity": A.DAC.Capacity,  # DAC capacity
+}
 
 
 class TestStorageModel:
@@ -24,13 +32,22 @@ class TestStorageModel:
         test_data_path = Path(__file__).parent / "rei_net_supply_df_12gw_nuclear.csv"
         return pd.read_csv(test_data_path)
 
-    def test_run_simulation_with_expected_outputs(self, sample_data: pd.DataFrame) -> None:
+    @pytest.fixture
+    def storage_model(self) -> StorageModel:
+        """Create a StorageModel instance for testing.
+
+        Returns:
+            StorageModel instance with standard test parameters.
+        """
+        return StorageModel(**SIMULATION_KWARGS)
+
+    def test_run_simulation_with_expected_outputs(self, storage_model: StorageModel, sample_data: pd.DataFrame) -> None:
         """Test that the simulation produces expected outputs for the standard test case."""
         # Run the simulation
-        net_supply_df = run_simulation(sample_data, renewable_capacity=250)
+        net_supply_df = storage_model.run_simulation(sample_data)
 
         # Analyze results
-        results = analyze_simulation_results(net_supply_df, renewable_capacity=250)
+        results = storage_model.analyze_simulation_results(net_supply_df)
 
         # Check that the expected outputs match the documented values
         # (with some tolerance for floating point precision)
@@ -45,9 +62,9 @@ class TestStorageModel:
         check(results["dac_capacity_factor"], expected_values["dac_capacity_factor"])
         check(results["annual_unused_energy"], expected_values["annual_unused_energy"])
 
-    def test_simulation_creates_expected_columns(self, sample_data: pd.DataFrame) -> None:
+    def test_simulation_creates_expected_columns(self, storage_model: StorageModel, sample_data: pd.DataFrame) -> None:
         """Test that the simulation creates the expected columns in the output DataFrame."""
-        net_supply_df = run_simulation(sample_data, renewable_capacity=250)
+        net_supply_df = storage_model.run_simulation(sample_data)
 
         # Check that expected columns exist for 250GW renewable capacity
         expected_columns = ["L (TWh),RC=250GW", "R_ccs (TWh),RC=250GW", "R_dac (TWh),RC=250GW", "R_unused (TWh),RC=250GW"]
@@ -55,14 +72,14 @@ class TestStorageModel:
         for col in expected_columns:
             assert col in net_supply_df.columns, f"Expected column {col} not found"
 
-    def test_simulation_physical_constraints(self, sample_data: pd.DataFrame) -> None:
+    def test_simulation_physical_constraints(self, storage_model: StorageModel, sample_data: pd.DataFrame) -> None:
         """Test that simulation results satisfy physical constraints."""
-        net_supply_df = run_simulation(sample_data, renewable_capacity=250)
+        net_supply_df = storage_model.run_simulation(sample_data)
 
         # Check storage level constraints
         storage_col = "L (TWh),RC=250GW"
         assert (net_supply_df[storage_col] >= 0).all(), "Storage levels cannot be negative"
-        assert (net_supply_df[storage_col] <= STORAGE_MAX_CAPACITY).all(), "Storage levels cannot exceed maximum capacity"
+        assert (net_supply_df[storage_col] <= storage_model.max_storage_capacity * U.TWh).all(), "Storage levels cannot exceed maximum capacity"
 
         # Check that residual energies are non-negative
         residual_col = "R_ccs (TWh),RC=250GW"
@@ -74,12 +91,12 @@ class TestStorageModel:
         assert (net_supply_df[unused_col] >= 0).all(), "Unused energy cannot be negative"
 
         # Check DAC capacity constraint
-        assert (net_supply_df[dac_col] <= DAC_MAX_DAILY_ENERGY).all(), "DAC energy cannot exceed daily capacity"
+        assert (net_supply_df[dac_col] <= storage_model.dac_max_daily_energy * U.TWh).all(), "DAC energy cannot exceed daily capacity"
 
-    def test_analyze_simulation_results_structure(self, sample_data: pd.DataFrame) -> None:
+    def test_analyze_simulation_results_structure(self, storage_model: StorageModel, sample_data: pd.DataFrame) -> None:
         """Test that analyze_simulation_results returns expected structure."""
-        net_supply_df = run_simulation(sample_data, renewable_capacity=250)
-        results = analyze_simulation_results(net_supply_df, renewable_capacity=250)
+        net_supply_df = storage_model.run_simulation(sample_data)
+        results = storage_model.analyze_simulation_results(net_supply_df)
 
         # Check that all expected keys are present
         expected_keys = {"minimum_storage", "annual_dac_energy", "dac_capacity_factor", "annual_unused_energy"}
@@ -98,8 +115,14 @@ class TestStorageModel:
     def test_simulation_with_custom_renewable_capacity(self, sample_data: pd.DataFrame) -> None:
         """Test that analyze_simulation_results works with custom renewable capacity."""
         # Test with different renewable capacities
-        net_supply_df = run_simulation(sample_data, renewable_capacity=300)
-        results = analyze_simulation_results(net_supply_df, renewable_capacity=300)
+        custom_model = StorageModel(
+            renewable_capacity=300 * U.GW,
+            max_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
+            electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
+            dac_capacity=A.DAC.Capacity,
+        )
+        net_supply_df = custom_model.run_simulation(sample_data)
+        results = custom_model.analyze_simulation_results(net_supply_df)
 
         assert results is not None
         assert isinstance(results, dict)
@@ -115,15 +138,21 @@ class TestStorageModel:
         all_results = {}
 
         for capacity in capacities:
-            net_supply_df = run_simulation(sample_data, renewable_capacity=capacity)
-            results = analyze_simulation_results(net_supply_df, renewable_capacity=capacity)
+            model = StorageModel(
+                renewable_capacity=capacity * U.GW,
+                max_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
+                electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
+                dac_capacity=A.DAC.Capacity,
+            )
+            net_supply_df = model.run_simulation(sample_data)
+            results = model.analyze_simulation_results(net_supply_df)
             all_results[capacity] = results
 
             # Verify that each capacity produces valid results
-            assert results["minimum_storage"] >= 0
-            assert results["annual_dac_energy"] >= 0
+            assert results["minimum_storage"] >= 0 * U.TWh
+            assert results["annual_dac_energy"] >= 0 * U.TWh
             assert 0 <= results["dac_capacity_factor"] <= 1
-            assert results["annual_unused_energy"] >= 0
+            assert results["annual_unused_energy"] >= 0 * U.TWh
 
         # Verify that different capacities produce different results
-        assert len(set(r["minimum_storage"] for r in all_results.values())) > 1, "Different capacities should produce different results"
+        assert len({r["minimum_storage"] for r in all_results.values()}) > 1, "Different capacities should produce different results"
