@@ -42,8 +42,6 @@ def get_net_supply(demand_data: str = "era5", *, naive_demand_scaling: bool = Fa
     # Repeat the average year to match the original dataframe length
     num_years = len(raw_demand_df) // len(demand_df)
     remaining_days = len(raw_demand_df) % len(demand_df)
-
-    # Create repeated pattern
     repeated_demand = pd.concat([demand_df] * num_years + [demand_df.iloc[:remaining_days]])
     repeated_demand.index = raw_demand_df.index
     raw_demand_df["demand"] = repeated_demand
@@ -79,4 +77,3 @@ def fraction_days_without_excess(net_supply_df: pd.DataFrame, *, return_mean: bo
     days_without_excess.name = "days_without_excess_generation"
 
     return days_without_excess
-
