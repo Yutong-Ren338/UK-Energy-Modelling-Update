@@ -1,5 +1,5 @@
-from src.misc import annualised_cost
 from src.units import Units as U
+from src.utils import annualised_cost
 
 # UK Energy Modelling Assumptions
 # This module contains key assumptions and parameters used throughout the energy modelling analysis
@@ -7,7 +7,7 @@ from src.units import Units as U
 # ============================================================================
 # PHYSICAL CONSTANTS
 # ============================================================================
-MolecularWeightCO2 = 44.01  # g/mol
+MolecularWeightCO2 = 44.01 * U.g / U.mol  # g/mol
 HoursPerDay = 24 * U.h
 HoursPerYear = HoursPerDay * 365.25  # Including leap years
 
@@ -90,9 +90,9 @@ class DAC:
     class EnergyCost:
         """Energy requirements for DAC processes"""
 
-        Low = 43  # kJ/mol CO2
-        Medium = 101  # kJ/mol CO2
-        High = 162  # kJ/mol CO2
+        Low = 43 * U.kJ / U.mol
+        Medium = 101 * U.kJ / U.mol
+        High = 162 * U.kJ / U.mol
 
 
 # ============================================================================

@@ -17,10 +17,10 @@ def yearly_dac_energy_cost(mt_co2: float, energy_cost: float, storage_energy_cos
     grams_co2 = mt_co2 * 1e6 * 1e6  # Mt -> t -> g
 
     # Convert grams to moles
-    mol_co2 = grams_co2 / A.MolecularWeightCO2
+    mol_co2 = grams_co2 / A.MolecularWeightCO2.magnitude
 
     # Calculate total energy in kJ
-    total_energy_kj = mol_co2 * energy_cost
+    total_energy_kj = mol_co2 * energy_cost.magnitude
 
     # Convert kJ to TWh (1 TWh = 3.6e12 kJ)
     total_energy_twh = total_energy_kj / 3.6e12

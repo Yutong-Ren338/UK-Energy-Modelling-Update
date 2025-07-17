@@ -28,7 +28,17 @@ class Units:
     TW = ureg.terawatt
 
     # energy
+    kJ = ureg.kilojoule
     kWh = ureg.kilowatt_hour
     MWh = ureg.megawatt_hour
     GWh = ureg.gigawatt_hour
     TWh = ureg.terawatt_hour
+
+    # weight
+    g = ureg.gram
+    kg = ureg.kilogram
+    t = ureg.ton
+    Mt = ureg.megatonne
+
+    # chemistry
+    mol = ureg.mol
