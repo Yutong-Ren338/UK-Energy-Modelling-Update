@@ -10,10 +10,11 @@ See [src/data/README.md](src/data/README.md) for data sources.
 
 ### Related work
 
-- [Large-scale electricity storage](https://royalsociety.org/news-resources/projects/low-carbon-energy-programme/large-scale-electricity-storage/)
-- Modelling the UK’s 2050 Energy System with Carbon Dioxide Removal - Rei Suzuki 2025
-- Exploration of Great Britain’s Optimal Energy Supply Mixture and Energy Storage Scenarios Upon a Transition to Net-Zero - Maj Mis 2024
-- AFRY BID3 model (sophisticated power demand model used by the CCC)
-- CCC CB7
-- NESO FES 2025
-
+| Title | Author | Date | Type | Link |
+|-------|---------|------|------|------|
+| Large-scale electricity storage | Royal Society | 2023 | Report | [Link](https://royalsociety.org/news-resources/projects/low-carbon-energy-programme/large-scale-electricity-storage/) |
+| Exploration of Great Britain's Optimal Energy Supply Mixture and Energy Storage Scenarios Upon a Transition to Net-Zero | Maj Mis | 2024 | Master's thesis | [Code](https://github.com/majmis1/Energy-Transition-Modelling) |
+| Modelling the UK's 2050 Energy System with Carbon Dioxide Removal | Rei Suzuki | 2025 | Master's thesis | [Code](https://github.com/RSuz1/UK-Energy-Model-with-CO2-Removal) |
+| AFRY BID3 model (sophisticated power demand model used by the CCC) | | | | |
+| CCC CB7 | | | | |
+| NESO FES 2025 | | | | |
