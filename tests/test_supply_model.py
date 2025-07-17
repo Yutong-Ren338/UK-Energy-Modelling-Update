@@ -10,11 +10,11 @@ from tests.config import OUTPUT_DIR
 
 def test_fraction_days_without_excess() -> None:
     A.Nuclear.Capacity = 12 * U.GW
-    era5_nuclear = supply_model.fraction_days_without_excess("era5", return_mean=True)
-    espeni_nuclear = supply_model.fraction_days_without_excess("espeni", return_mean=True)
+    era5_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply("era5", naive_demand_scaling=False), return_mean=True)
+    espeni_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply("espeni", naive_demand_scaling=False), return_mean=True)
     A.Nuclear.Capacity = 0 * U.GW
-    era5_no_nuclear = supply_model.fraction_days_without_excess("era5", return_mean=True)
-    espeni_no_nuclear = supply_model.fraction_days_without_excess("espeni", return_mean=True)
+    era5_no_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply("era5", naive_demand_scaling=False), return_mean=True)
+    espeni_no_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply("espeni", naive_demand_scaling=False), return_mean=True)
 
     plt.figure()
     plt.plot(era5_nuclear.index.values, era5_nuclear, label="ERA5 12 GW Nuclear")
@@ -30,11 +30,11 @@ def test_fraction_days_without_excess() -> None:
 
 def test_fraction_days_without_excess_naive_demand() -> None:
     A.Nuclear.Capacity = 12 * U.GW
-    naive_nuclear = supply_model.fraction_days_without_excess("era5", return_mean=True, naive_demand_scaling=True)
-    new_nuclear = supply_model.fraction_days_without_excess("era5", return_mean=True, naive_demand_scaling=False)
+    naive_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply("era5", naive_demand_scaling=True), return_mean=True)
+    new_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply("era5", naive_demand_scaling=False), return_mean=True)
     A.Nuclear.Capacity = 0 * U.GW
-    naive_no_nuclear = supply_model.fraction_days_without_excess("era5", return_mean=True, naive_demand_scaling=True)
-    new_no_nuclear = supply_model.fraction_days_without_excess("era5", return_mean=True, naive_demand_scaling=False)
+    naive_no_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply("era5", naive_demand_scaling=True), return_mean=True)
+    new_no_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply("era5", naive_demand_scaling=False), return_mean=True)
 
     plt.figure()
     plt.plot(naive_nuclear.index.values, naive_nuclear, label="Naive 12 GW Nuclear")
