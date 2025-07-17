@@ -103,8 +103,8 @@ class DAC:
 class Nuclear:
     """Parameters for nuclear power generation technologies"""
 
+    Capacity = 12 * U.GW
     CapacityFactor = 0.9  # Based on Hinkley Point C performance
-    Capacity = 12e3 * U.MW
 
     class CapacityRatios:
         """Mix ratios for different nuclear technologies in the nuclear portfolio"""
