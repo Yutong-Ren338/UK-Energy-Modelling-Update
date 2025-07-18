@@ -1,4 +1,21 @@
 import pandas as pd
+from pint import Quantity
+
+from src.units import Units as U
+
+
+def convert_energy_cost(energy_cost_per_mol: Quantity, molecular_weight: Quantity) -> Quantity:
+    """Convert energy cost from kJ/mol to TWh/Mt using the molecular weight of CO2.
+
+    Args:
+        energy_cost_per_mol (Quantity): Energy cost in kJ/mol.
+        molecular_weight (Quantity): Molecular weight in g/mol.
+
+    Returns:
+        Quantity: Energy cost in TWh/Mt.
+    """
+    assert energy_cost_per_mol.units == U.kJ / U.mol, "Input must be in kJ/mol"
+    return (energy_cost_per_mol / molecular_weight).to(U.TWh / U.Mt)
 
 
 def rolling_mean_circular(df: pd.DataFrame, column: str, window_size: int) -> pd.Series:
