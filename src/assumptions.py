@@ -83,7 +83,7 @@ class DAC:
     """Parameters for Direct Air Capture technology"""
 
     # System capacity parameters
-    Capacity = 10.0 * U.GW
+    Capacity = 27.0 * U.GW
 
     CarbonStorage = 7.5  # GBP/tonne CO2
 
