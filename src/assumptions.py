@@ -1,5 +1,5 @@
 from src.units import Units as U
-from src.utils import annualised_cost
+from src.utils import annualised_cost, convert_energy_cost
 
 # UK Energy Modelling Assumptions
 # This module contains key assumptions and parameters used throughout the energy modelling analysis
@@ -83,7 +83,7 @@ class DAC:
     """Parameters for Direct Air Capture technology"""
 
     # System capacity parameters
-    Capacity = 27.0 * U.GW
+    Capacity = 10.0 * U.GW
 
     CarbonStorage = 7.5  # GBP/tonne CO2
 
@@ -93,6 +93,8 @@ class DAC:
         Low = 43 * U.kJ / U.mol
         Medium = 101 * U.kJ / U.mol
         High = 162 * U.kJ / U.mol
+
+        LowTWhPerMt = convert_energy_cost(Low, MolecularWeightCO2)
 
 
 # ============================================================================
