@@ -18,6 +18,7 @@
 ### Energy system modelling
 
 - [x] implement storage model
+- [ ] add losses from transmission and distribution
 - [ ] add interconnectors
     - Maj looked at this already, found approx 14 GW capacity meeting on average 6% of demand per year
 - [ ] add dispatchable low carbon generation (gas + CCS)
@@ -30,4 +31,5 @@
 - [ ] cost optimised solutions
 
 ### Net zero modelling
+
 - [ ] add Enhanced Rock Weathering for removals
