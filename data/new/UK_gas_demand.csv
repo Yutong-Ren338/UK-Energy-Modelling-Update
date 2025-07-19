@@ -1,6 +1,18 @@
 Applicable At,Applicable For,Data Item,Value,Generated Time,Quality Indicator
-14/07/2025 01:00:00,14/07/2025,"NTS Energy Offtaken, Industrial Offtake Total",27574413,15/07/2025 12:01:01,L
-14/07/2025 01:00:00,14/07/2025,"NTS Energy Offtaken, LDZ Offtake Total",461384278,15/07/2025 14:01:01,A
+18/07/2025 01:00:00,18/07/2025,"NTS Energy Offtaken, Industrial Offtake Total",30004696,19/07/2025 14:01:00,A
+18/07/2025 01:00:00,18/07/2025,"NTS Energy Offtaken, LDZ Offtake Total",483653774,19/07/2025 12:01:01,L
+18/07/2025 01:00:00,18/07/2025,"NTS Energy Offtaken, Powerstations Total",409027536,19/07/2025 12:01:01,A
+17/07/2025 01:00:00,17/07/2025,"NTS Energy Offtaken, Industrial Offtake Total",28298302,18/07/2025 12:01:00,L
+17/07/2025 01:00:00,17/07/2025,"NTS Energy Offtaken, LDZ Offtake Total",517122609,18/07/2025 16:01:01,A
+17/07/2025 01:00:00,17/07/2025,"NTS Energy Offtaken, Powerstations Total",450977218,18/07/2025 12:01:00,A
+16/07/2025 01:00:00,16/07/2025,"NTS Energy Offtaken, Industrial Offtake Total",36571020,17/07/2025 14:01:01,A
+16/07/2025 01:00:00,16/07/2025,"NTS Energy Offtaken, LDZ Offtake Total",515789460,18/07/2025 14:01:00,A
+16/07/2025 01:00:00,16/07/2025,"NTS Energy Offtaken, Powerstations Total",434607410,17/07/2025 12:01:00,A
+15/07/2025 01:00:00,15/07/2025,"NTS Energy Offtaken, Industrial Offtake Total",26851837,16/07/2025 16:01:00,A
+15/07/2025 01:00:00,15/07/2025,"NTS Energy Offtaken, LDZ Offtake Total",507312338,17/07/2025 14:01:01,A
+15/07/2025 01:00:00,15/07/2025,"NTS Energy Offtaken, Powerstations Total",168036763,16/07/2025 12:01:00,A
+14/07/2025 01:00:00,14/07/2025,"NTS Energy Offtaken, Industrial Offtake Total",27544445,16/07/2025 12:01:00,A
+14/07/2025 01:00:00,14/07/2025,"NTS Energy Offtaken, LDZ Offtake Total",463670400,18/07/2025 14:01:00,A
 14/07/2025 01:00:00,14/07/2025,"NTS Energy Offtaken, Powerstations Total",202160921,15/07/2025 12:01:01,A
 13/07/2025 01:00:00,13/07/2025,"NTS Energy Offtaken, Industrial Offtake Total",31942401,14/07/2025 14:01:01,A
 13/07/2025 01:00:00,13/07/2025,"NTS Energy Offtaken, LDZ Offtake Total",399181293,14/07/2025 16:01:01,A
@@ -5462,27 +5474,6 @@ Applicable At,Applicable For,Data Item,Value,Generated Time,Quality Indicator
 20/07/2020 01:00:00,20/07/2020,"NTS Energy Offtaken, Industrial Offtake Total",175063379,22/07/2020 12:01:01,A
 20/07/2020 01:00:00,20/07/2020,"NTS Energy Offtaken, LDZ Offtake Total",663854686,21/07/2020 14:01:01,A
 20/07/2020 01:00:00,20/07/2020,"NTS Energy Offtaken, Powerstations Total",630133281,24/07/2020 14:01:01,A
-19/07/2020 01:00:00,19/07/2020,"NTS Energy Offtaken, Industrial Offtake Total",178520072,21/07/2020 14:01:01,A
-19/07/2020 01:00:00,19/07/2020,"NTS Energy Offtaken, LDZ Offtake Total",583402087,21/07/2020 12:01:00,A
-19/07/2020 01:00:00,19/07/2020,"NTS Energy Offtaken, Powerstations Total",312291520,24/07/2020 18:01:01,A
-18/07/2020 01:00:00,18/07/2020,"NTS Energy Offtaken, Industrial Offtake Total",182414327,23/07/2020 12:01:01,A
-18/07/2020 01:00:00,18/07/2020,"NTS Energy Offtaken, LDZ Offtake Total",563666868,21/07/2020 12:01:00,A
-18/07/2020 01:00:00,18/07/2020,"NTS Energy Offtaken, Powerstations Total",312384811,21/07/2020 14:01:01,A
-17/07/2020 01:00:00,17/07/2020,"NTS Energy Offtaken, Industrial Offtake Total",156642873,20/07/2020 13:01:01,A
-17/07/2020 01:00:00,17/07/2020,"NTS Energy Offtaken, LDZ Offtake Total",612785891,20/07/2020 16:01:01,A
-17/07/2020 01:00:00,17/07/2020,"NTS Energy Offtaken, Powerstations Total",516070385,21/07/2020 16:01:01,A
-16/07/2020 01:00:00,16/07/2020,"NTS Energy Offtaken, Industrial Offtake Total",208294896,20/07/2020 13:01:01,A
-16/07/2020 01:00:00,16/07/2020,"NTS Energy Offtaken, LDZ Offtake Total",703549485,17/07/2020 16:01:00,A
-16/07/2020 01:00:00,16/07/2020,"NTS Energy Offtaken, Powerstations Total",603602756,21/07/2020 12:01:00,A
-15/07/2020 01:00:00,15/07/2020,"NTS Energy Offtaken, Industrial Offtake Total",200137512,17/07/2020 12:01:01,A
-15/07/2020 01:00:00,15/07/2020,"NTS Energy Offtaken, LDZ Offtake Total",746735731,16/07/2020 16:01:01,A
-15/07/2020 01:00:00,15/07/2020,"NTS Energy Offtaken, Powerstations Total",671364161,20/07/2020 16:01:01,A
-14/07/2020 01:00:00,14/07/2020,"NTS Energy Offtaken, Industrial Offtake Total",199305229,16/07/2020 16:01:01,A
-14/07/2020 01:00:00,14/07/2020,"NTS Energy Offtaken, LDZ Offtake Total",692009209,15/07/2020 14:01:01,A
-14/07/2020 01:00:00,14/07/2020,"NTS Energy Offtaken, Powerstations Total",660722937,19/07/2020 14:01:01,A
-13/07/2020 01:00:00,13/07/2020,"NTS Energy Offtaken, Industrial Offtake Total",194084371,14/07/2020 14:01:00,A
-13/07/2020 01:00:00,13/07/2020,"NTS Energy Offtaken, LDZ Offtake Total",637669710,15/07/2020 16:01:00,A
-13/07/2020 01:00:00,13/07/2020,"NTS Energy Offtaken, Powerstations Total",539350992,18/07/2020 12:01:00,A
 31/05/2020 01:00:00,31/05/2020,"NTS Energy Offtaken, Industrial Offtake Total",108727683,03/06/2020 17:02:14,A
 31/05/2020 01:00:00,31/05/2020,"NTS Energy Offtaken, LDZ Offtake Total",550214414,02/06/2020 17:02:15,A
 31/05/2020 01:00:00,31/05/2020,"NTS Energy Offtaken, Powerstations Total",243289599,02/06/2020 14:02:19,A
