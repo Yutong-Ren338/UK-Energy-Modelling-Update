@@ -12,15 +12,23 @@
 
 ### Demand modelling
 
-- [ ] heating degree days seasonality
-- [ ] plug in different CCC and NESO FES demand scenarios
+- [ ] fix the demand seasonality model:
+    - the summer shouldn't change versus naive scaling, but the winter should have additional demand
+    - adjust the definition of the seasonality index accordingly
+- [ ] plug in different CCC demand scenarios
+- [ ] use heating degree days for an independent way to model seasonality
 
 ### Energy system modelling
 
 - [x] implement storage model
 - [ ] add losses from transmission and distribution
+    - FES 2025 states that transmission losses are around 2% today but increasing to 3% by 2050
+    - Distribution losses are higher, typically around 5-8%
+    - DUKES 2024 says that 2023 total losses are around 9%
+    - If we look at the ratio of demand from the CCC hourly data which accounts for losses and compare with the end use demand, we get around 11.3% total losses
 - [ ] add interconnectors
     - Maj looked at this already, found approx 14 GW capacity meeting on average 6% of demand per year
+    - Can probably get these numbers from ESPENI dataset, and other sources
 - [ ] add dispatchable low carbon generation (gas + CCS)
     - [ ] Review CB7, FES 2025, and RS report assumptions
 - [ ] move to hourly time resolution
@@ -33,3 +41,8 @@
 ### Net zero modelling
 
 - [ ] add Enhanced Rock Weathering for removals
+- [ ] add BECCS
+
+### Analysis & visualisation
+
+- [ ] Look at fraction unmet demand instead of fraction days with unmet demand
