@@ -12,9 +12,7 @@
 
 ### Demand modelling
 
-- [ ] fix the demand seasonality model:
-    - the summer shouldn't change versus naive scaling, but the winter should have additional demand
-    - adjust the definition of the seasonality index accordingly
+- [ ] look for updated version of ESPENI demand data
 - [ ] plug in different CCC demand scenarios
 - [ ] make it trivial to switch between seasonal, naive, and CCC demand models
 - [ ] use heating degree days for an independent way to model seasonality

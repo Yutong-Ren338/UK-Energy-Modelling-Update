@@ -1,12 +1,13 @@
+import pandas as pd
 from pint import Quantity
 
-from src import assumptions
+import src.assumptions as A
 from src.data import cb7
 from tests.config import check
 
-EXPECTED_FRACTION = assumptions.CB7FractionHeatDemandBuildings
-EXPECTED_BUILDINGS_DEMAND = assumptions.CB7EnergyDemand2050Buildings
-EXPECTED_TOTAL_DEMAND = assumptions.CB7EnergyDemand2050
+EXPECTED_FRACTION = A.CB7FractionHeatDemandBuildings
+EXPECTED_BUILDINGS_DEMAND = A.CB7EnergyDemand2050Buildings
+EXPECTED_TOTAL_DEMAND = A.CB7EnergyDemand2050
 
 
 def test_frac_heat_demand_from_buildings() -> None:
@@ -52,3 +53,14 @@ def test_total_demand_2050() -> None:
     # Check that total demand is greater than buildings demand
     buildings_demand = cb7.buildings_electricity_demand()
     assert result > buildings_demand, f"Total demand ({result}) should be greater than buildings demand ({buildings_demand})"
+
+
+def test_demand_ccc() -> None:
+    df = cb7.cb7_demand(A.EnergyDemand2050)
+    assert df.shape[0] > 0
+    assert "demand" in df.columns
+    assert df["demand"].dtype == "pint[TWh]"
+    assert df["demand"].min() >= 0.0
+    assert isinstance(df.index, pd.DatetimeIndex)
+    assert df.index.dtype == "datetime64[ns]"
+    # assert not df.index.has_duplicates

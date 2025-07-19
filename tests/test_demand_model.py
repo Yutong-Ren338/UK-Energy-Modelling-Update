@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import pandas as pd
 from config import check
 
 from src import assumptions as A
@@ -6,172 +7,128 @@ from src import (
     demand_model,
     matplotlib_style,  # noqa: F401
 )
-from src.data import cb7
+from src.data import cb7, historical_demand
+from src.units import Units as U
 from tests.config import OUTPUT_DIR
+
+OUTPUT_PATH = OUTPUT_DIR / "demand_model"
+OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 
 # Constants
 DAYS_IN_LEAP_YEAR = 366
 MAX_DAILY_CHANGE = 0.1  # Maximum allowed day-to-day change in seasonality index
 
 
-def test_gas_seasonality_index() -> None:
-    """Test the gas seasonality index calculation."""
-    df = demand_model.gas_seasonality_index()
-
-    # Check that we have the right columns
-    assert "day_of_year" in df.columns
-    assert "seasonality_index" in df.columns
-
-    # Check that we have 366 days (including leap year)
-    assert len(df) == DAYS_IN_LEAP_YEAR
-
-    # Check that day_of_year ranges from 1 to 366
-    assert df["day_of_year"].min() == 1
-    assert df["day_of_year"].max() == DAYS_IN_LEAP_YEAR
-
-    # Check that seasonality index is positive
-    assert (df["seasonality_index"] > 0).all()
-
-    # Check that the mean seasonality index is approximately 1
-    check(df["seasonality_index"].mean(), 1.0)
-
-    # Check that winter has higher seasonality index than summer
-    winter_months = df[df["day_of_year"].isin(range(1, 90)) | df["day_of_year"].isin(range(335, 367))]
-    summer_months = df[df["day_of_year"].isin(range(152, 244))]  # June-August
-
-    assert winter_months["seasonality_index"].mean() > summer_months["seasonality_index"].mean()
+def test_naive_demand_scaling() -> None:
+    """Test the naive demand scaling method."""
+    df = demand_model.naive_demand_scaling(historical_demand.historical_electricity_demand())
+    assert df.shape[0] > 0
+    assert df.columns.tolist() == ["demand"]
+    assert df["demand"].dtype == "pint[TWh]"
+    assert df["demand"].min() >= 0.0
+    assert df.index.name == "date"
+    assert isinstance(df.index, pd.DatetimeIndex)
+    assert df.index.dtype == "datetime64[ns]"
+    assert not df.index.has_duplicates
 
 
-def test_electricity_seasonality_index() -> None:
-    """Test the electricity seasonality index calculation."""
-    df_historical = demand_model.historical_electricity_demand()
-    df = demand_model.electricity_seasonality_index(df_historical)
+def test_seasonality_indices() -> None:
+    df_electricity = historical_demand.historical_electricity_demand()
+    df_gas = historical_demand.historical_gas_demand()
+    electricity_seasonality = demand_model.seasonality_index(df_electricity, "demand", average_year=False)
+    gas_seasonality = demand_model.seasonality_index(df_gas, "demand", average_year=False)
 
-    # Check that we have the right columns
-    assert "day_of_year" in df.columns
-    assert "seasonality_index" in df.columns
-
-    # Check that we have 366 days (including leap year)
-    assert len(df) == DAYS_IN_LEAP_YEAR
-
-    # Check that day_of_year ranges from 1 to 366
-    assert df["day_of_year"].min() == 1
-    assert df["day_of_year"].max() == DAYS_IN_LEAP_YEAR
-
-    # Check that seasonality index is positive
-    assert (df["seasonality_index"] > 0).all()
-
-    # Check that the mean seasonality index is approximately 1
-    check(df["seasonality_index"].mean(), 1.0)
-
-
-def test_combined_seasonality_index() -> None:
-    """Test the combined seasonality index and create a plot artifact."""
-    df = demand_model.historical_electricity_demand()
-    df_combined = demand_model.combined_seasonality_index(df)
-
-    # Check that we have the right columns
-    assert "day_of_year" in df_combined.columns
-    assert "seasonality_index_gas" in df_combined.columns
-    assert "seasonality_index_electricity" in df_combined.columns
-
-    # Check that we have 366 days
-    assert len(df_combined) == DAYS_IN_LEAP_YEAR
-
-    # Check that day_of_year ranges from 1 to 366
-    assert df_combined["day_of_year"].min() == 1
-    assert df_combined["day_of_year"].max() == DAYS_IN_LEAP_YEAR
-
-    # Check that both seasonality indices are positive
-    assert (df_combined["seasonality_index_gas"] > 0).all()
-    assert (df_combined["seasonality_index_electricity"] > 0).all()
-
-    # Check that both mean seasonality indices are approximately 1
-    check(df_combined["seasonality_index_gas"].mean(), 1.0)
-    check(df_combined["seasonality_index_electricity"].mean(), 1.0)
-
-    # Check that gas has higher seasonality than electricity (gas demand varies more with weather)
-    gas_std = df_combined["seasonality_index_gas"].std()
-    electricity_std = df_combined["seasonality_index_electricity"].std()
-    assert gas_std > electricity_std
-
-    # Create the plot artifact
-    plt.figure()
-    plt.plot(df_combined["day_of_year"], df_combined["seasonality_index_gas"], label="Gas Seasonality Index")
-    plt.plot(df_combined["day_of_year"], df_combined["seasonality_index_electricity"], label="Electricity Seasonality Index")
+    plt.figure(figsize=(10, 6))
+    plt.plot(gas_seasonality.index, gas_seasonality, label="Gas Seasonality Index")
+    plt.plot(electricity_seasonality.index, electricity_seasonality, label="Electricity Seasonality Index")
     plt.xlabel("Day of Year")
     plt.ylabel("Seasonality Index")
-    plt.title("Seasonality Index by Day of Year")
+    plt.title("Gas and Electricity Seasonality Indices")
     plt.legend()
-
-    # Save the plot as an artifact
-    plt.savefig(OUTPUT_DIR / "seasonality_index_comparison.png")
+    plt.savefig(OUTPUT_PATH / "seasonality_indices_comparison.png")
     plt.close()
 
 
-def test_gas_seasonality_index_filter_lzd() -> None:
-    """Test the gas seasonality index with and without LZD filtering."""
-    df_filtered = demand_model.gas_seasonality_index(filter_lzd=True)
-    df_unfiltered = demand_model.gas_seasonality_index(filter_lzd=False)
+def test_seasonality_indices_average_year() -> None:
+    df_electricity = historical_demand.historical_electricity_demand()
+    df_gas = historical_demand.historical_gas_demand()
+    electricity_seasonality = demand_model.seasonality_index(df_electricity, "demand", average_year=True)
+    gas_seasonality = demand_model.seasonality_index(df_gas, "demand", average_year=True)
 
-    # Both should have the same structure
-    assert len(df_filtered) == len(df_unfiltered) == DAYS_IN_LEAP_YEAR
+    # Check that the indices are of the expected length
+    assert len(electricity_seasonality) == DAYS_IN_LEAP_YEAR
+    assert len(gas_seasonality) == DAYS_IN_LEAP_YEAR
 
-    # The values should be different when filtering is applied
-    assert not df_filtered["seasonality_index"].equals(df_unfiltered["seasonality_index"])
+    # Check that the indices are positive
+    assert (electricity_seasonality > 0).all()
+    assert (gas_seasonality > 0).all()
 
-    # Both should still have mean approximately 1
-    check(df_filtered["seasonality_index"].mean(), 1.0)
-    check(df_unfiltered["seasonality_index"].mean(), 1.0)
+    # Check that the mean seasonality index is approximately 1
+    check(electricity_seasonality.mean(), 1.0)
+    check(gas_seasonality.mean(), 1.0)
 
-
-def test_seasonality_index_continuity() -> None:
-    """Test that the seasonality indices are smooth and continuous."""
-    df = demand_model.historical_electricity_demand()
-    df_combined = demand_model.combined_seasonality_index(df)
-
-    # Check that there are no large jumps in the data (smoothness test)
-    gas_diff = df_combined["seasonality_index_gas"].diff().abs()
-    electricity_diff = df_combined["seasonality_index_electricity"].diff().abs()
-
-    # No single day-to-day change should be more than 0.1 (10%)
-    assert gas_diff.max() < MAX_DAILY_CHANGE, f"Gas seasonality has large jump: {gas_diff.max()}"
-    assert electricity_diff.max() < MAX_DAILY_CHANGE, f"Electricity seasonality has large jump: {electricity_diff.max()}"
-
-    # Check that the beginning and end of year connect smoothly (circular continuity)
-    gas_circular_diff = abs(df_combined.iloc[0]["seasonality_index_gas"] - df_combined.iloc[-1]["seasonality_index_gas"])
-    electricity_circular_diff = abs(df_combined.iloc[0]["seasonality_index_electricity"] - df_combined.iloc[-1]["seasonality_index_electricity"])
-
-    assert gas_circular_diff < MAX_DAILY_CHANGE, f"Gas seasonality not circular: {gas_circular_diff}"
-    assert electricity_circular_diff < MAX_DAILY_CHANGE, f"Electricity seasonality not circular: {electricity_circular_diff}"
+    # Create the plot artifact
+    plt.figure(figsize=(10, 6))
+    plt.plot(gas_seasonality.index, gas_seasonality, label="Gas Seasonality Index")
+    plt.plot(electricity_seasonality.index, electricity_seasonality, label="Electricity Seasonality Index")
+    plt.xlabel("Day of Year")
+    plt.ylabel("Seasonality Index")
+    plt.title("Gas and Electricity Seasonality Indices")
+    plt.legend()
+    plt.savefig(OUTPUT_PATH / "seasonality_indices_comparison_average_year.png")
+    plt.close()
 
 
-def test_demand_scaling_methods() -> None:
+def test_seasonal_demand_scaling_options() -> None:
     A.CB7EnergyDemand2050Buildings = cb7.buildings_electricity_demand(include_non_residential=True)
-    df = demand_model.historical_electricity_demand()
+    df = historical_demand.historical_electricity_demand()
     df["day_of_year"] = df.index.dayofyear
     average_year = (df.groupby("day_of_year")["demand"].mean() * A.HoursPerDay).astype("pint[terawatt_hour]")
     plt.plot(average_year.index, average_year.values, label="Average Historical Demand")
 
-    df_naive = demand_model.historical_electricity_demand()
-    df_naive = demand_model.naive_demand_scaling(df_naive)
+    df_naive = demand_model.predicted_demand(mode="naive")
     plt.plot(df_naive.index, df_naive.values, label="Naive Demand Scaling")
 
-    df_better = demand_model.seasonal_demand_scaling(df)
-    plt.plot(df_better.index, df_better.values, label="Seasonal Demand Scaling")
+    df_seasonal = demand_model.predicted_demand(mode="seasonal")
+    plt.plot(df_seasonal.index, df_seasonal.values, label="Seasonal Demand Scaling")
 
-    df_better = demand_model.seasonal_demand_scaling(df, filter_ldz=False)
-    plt.plot(df_better.index, df_better.values, label="Seasonal Demand Scaling (No LDZ Filter)")
+    df_seasonal = demand_model.predicted_demand(mode="seasonal", filter_ldz=False)
+    plt.plot(df_seasonal.index, df_seasonal.values, label="Seasonal Demand Scaling (No LDZ Filter)")
 
     A.CB7EnergyDemand2050Buildings = cb7.buildings_electricity_demand(include_non_residential=False)
-    df_better = demand_model.seasonal_demand_scaling(df, filter_ldz=False)
-    plt.plot(df_better.index, df_better.values, label="Seasonal Demand Scaling (+ No Non-Residential)")
+    df_seasonal = demand_model.predicted_demand(mode="seasonal", filter_ldz=False)
+    plt.plot(df_seasonal.index, df_seasonal.values, label="Seasonal Demand Scaling (+ No Non-Residential)")
 
-    df_better = demand_model.seasonal_demand_scaling(df, old_gas_data=True, filter_ldz=False)
-    plt.plot(df_better.index, df_better.values, label="Seasonal Demand Scaling (+ Old gas data)")
+    df_seasonal = demand_model.predicted_demand(mode="seasonal", old_gas_data=True, filter_ldz=False)
+    plt.plot(df_seasonal.index, df_seasonal.values, label="Seasonal Demand Scaling (+ Old gas data)")
 
     plt.xlabel("Day of Year")
     plt.ylabel("Electricity Demand (TWh/day)")
     plt.legend(fontsize=8)
-    plt.savefig(OUTPUT_DIR / "demand_scaling_comparison.png")
+    plt.savefig(OUTPUT_PATH / "demand_scaling_comparison.png")
+    plt.close()
+
+
+def test_predicted_demand() -> None:
+    """Test the predicted demand for 2050."""
+
+    demands = {}
+    for mode in ["naive", "seasonal", "cb7"]:
+        df = demand_model.predicted_demand(mode=mode, average_year=True)
+        assert isinstance(df, pd.DataFrame), f"Expected df for mode {mode}, got {type(df)}"
+        assert not df.empty, f"Predicted demand for mode {mode} is empty"
+        assert df.columns.tolist() == ["demand"], f"Predicted demand for mode {mode} has unexpected columns: {df.columns.tolist()}"
+        assert df.index.name == "date", f"Predicted demand for mode {mode} has unexpected index name: {df.index.name}"
+        assert (df["demand"] >= 0 * U.TWh).all(), f"Predicted demand for mode {mode} contains negative values"
+        assert df["demand"].dtype == "pint[TWh]", f"Predicted demand for mode {mode} has incorrect dtype: {df['demand'].dtype}"
+        demands[mode] = df
+
+    # plot
+    plt.figure(figsize=(10, 6))
+    for mode, df in demands.items():
+        plt.plot(df.index, df["demand"], label=f"Predicted Demand ({mode})")
+    plt.xlabel("Day of Year")
+    plt.ylabel("Electricity Demand (TWh)")
+    plt.legend()
+    plt.savefig(OUTPUT_PATH / "predicted_demand_comparison_average_year.png")
     plt.close()

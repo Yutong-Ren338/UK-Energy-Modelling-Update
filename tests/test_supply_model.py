@@ -1,20 +1,26 @@
-from src import matplotlib_style  # noqa
 import matplotlib.pyplot as plt
 
 import src.assumptions as A
-from src import supply_model
-
+from src import (
+    demand_model,
+    matplotlib_style,  # noqa: F401
+    supply_model,
+)
+from src.data import renewable_capacity_factors
 from src.units import Units as U
 from tests.config import OUTPUT_DIR
 
 
 def test_fraction_days_without_excess() -> None:
+    demand_era5 = demand_model.predicted_demand(mode="seasonal", historical="era5", average_year=False)
+    demand_espeni = demand_model.predicted_demand(mode="seasonal", historical="espeni", average_year=False)
+
     A.Nuclear.Capacity = 12 * U.GW
-    era5_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply("era5", naive_demand_scaling=False), return_mean=True)
-    espeni_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply("espeni", naive_demand_scaling=False), return_mean=True)
+    era5_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply(demand_era5), return_mean=True)
+    espeni_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply(demand_espeni), return_mean=True)
     A.Nuclear.Capacity = 0 * U.GW
-    era5_no_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply("era5", naive_demand_scaling=False), return_mean=True)
-    espeni_no_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply("espeni", naive_demand_scaling=False), return_mean=True)
+    era5_no_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply(demand_era5), return_mean=True)
+    espeni_no_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply(demand_espeni), return_mean=True)
 
     plt.figure()
     plt.plot(era5_nuclear.index.values, era5_nuclear, label="ERA5 12 GW Nuclear")
@@ -29,12 +35,16 @@ def test_fraction_days_without_excess() -> None:
 
 
 def test_fraction_days_without_excess_naive_demand() -> None:
+    # now a version comparing naive and new demand scaling
+    demand_naive = demand_model.predicted_demand(mode="naive", historical="era5", average_year=False)
+    demand_seasonal = demand_model.predicted_demand(mode="seasonal", historical="era5", average_year=False)
+
     A.Nuclear.Capacity = 12 * U.GW
-    naive_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply("era5", naive_demand_scaling=True), return_mean=True)
-    new_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply("era5", naive_demand_scaling=False), return_mean=True)
+    naive_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply(demand_naive), return_mean=True)
+    new_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply(demand_seasonal), return_mean=True)
     A.Nuclear.Capacity = 0 * U.GW
-    naive_no_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply("era5", naive_demand_scaling=True), return_mean=True)
-    new_no_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply("era5", naive_demand_scaling=False), return_mean=True)
+    naive_no_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply(demand_naive), return_mean=True)
+    new_no_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply(demand_seasonal), return_mean=True)
 
     plt.figure()
     plt.plot(naive_nuclear.index.values, naive_nuclear, label="Naive 12 GW Nuclear")
@@ -45,4 +55,28 @@ def test_fraction_days_without_excess_naive_demand() -> None:
     plt.ylabel("Days without Excess Generation")
     plt.legend()
     plt.savefig(OUTPUT_DIR / "fraction_days_without_excess_naive_demand.png")
+    plt.close()
+
+
+def test_compare_supply_demand() -> None:
+    # supply
+    daily_capacity_factors = renewable_capacity_factors.get_renewable_capacity_factors(resample="D")
+    supply_df = supply_model.daily_renewables_capacity(300 * U.GW, daily_capacity_factors).to_frame()
+    supply_df["day_of_year"] = supply_df.index.dayofyear
+    mean = supply_df.groupby("day_of_year").mean().astype(float)
+    plt.figure(figsize=(10, 5))
+    plt.plot(mean.index, mean, label="Supply Seasonality Index")
+
+    # naive demand
+    naive_df = demand_model.predicted_demand(mode="naive", average_year=True)
+    plt.plot(naive_df.index, naive_df["demand"], label="Naive Demand")
+
+    # seasonal demand
+    seasonal_df = demand_model.predicted_demand(mode="seasonal", average_year=True)
+    plt.plot(seasonal_df.index, seasonal_df["demand"], label="Seasonal Demand")
+
+    plt.xlabel("Day of Year")
+    plt.ylabel("Energy (TWh)")
+    plt.legend()
+    plt.savefig(OUTPUT_DIR / "compare_supply_demand.png")
     plt.close()

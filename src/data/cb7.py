@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
+from pint import Quantity
 
 from src.units import Units as U
 
@@ -103,6 +104,9 @@ def extract_daily_2050_demand() -> None:
     df["day_of_year"] = df["Hour"] // 24
     df["datetime"] = pd.to_datetime(df["Year"], format="%Y") + pd.to_timedelta(df["Hour"], unit="h")
 
+    # convert to TWh
+    df["Electricity demand without electrolysis"] /= 1e3
+
     # resample each weather year to daily sums and combine
     dfs = {}
     for weather_year in df["Weather year"].unique():
@@ -118,3 +122,23 @@ def extract_daily_2050_demand() -> None:
 
     # save as csv
     df_combined.to_csv(DATA_PATH / f"ccc_daily_demand_{demand_year}.csv", index=False)
+
+
+def cb7_demand(total_yearly_demand: Quantity) -> pd.DataFrame:
+    """
+    Load and return the CCC 2050 demand data for the UK.
+    Loads the data from the preprocessed CSV file created by `extract_daily_2050_demand`.
+
+    Args:
+        total_yearly_demand (Quantity): The total yearly demand in TWh, used to scale the daily demand.
+
+    Returns:
+        pd.DataFrame: DataFrame containing the demand data in GW.
+    """
+    df = pd.read_csv(DATA_PATH / "ccc_daily_demand_2050.csv")
+    df["date"] = pd.to_datetime(df["datetime"])
+    df = df.set_index("date")
+    df = df.rename(columns={"demand (TWh)": "demand"})
+    df["demand"] = (df["demand"]).astype("pint[TWh]")
+    df["demand"] *= total_yearly_demand * 3 / df["demand"].sum()
+    return df
