@@ -154,17 +154,17 @@ def test_demand_scaling_methods() -> None:
     df_naive = demand_model.naive_demand_scaling(df_naive)
     plt.plot(df_naive.index, df_naive.values, label="Naive Demand Scaling")
 
-    df_better = demand_model.demand_scaling()
+    df_better = demand_model.seasonal_demand_scaling()
     plt.plot(df_better.index, df_better.values, label="Seasonal Demand Scaling")
 
-    df_better = demand_model.demand_scaling(filter_ldz=False)
+    df_better = demand_model.seasonal_demand_scaling(filter_ldz=False)
     plt.plot(df_better.index, df_better.values, label="Seasonal Demand Scaling (No LDZ Filter)")
 
     A.CB7EnergyDemand2050Buildings = cb7.buildings_electricity_demand(include_non_residential=False)
-    df_better = demand_model.demand_scaling(filter_ldz=False)
+    df_better = demand_model.seasonal_demand_scaling(filter_ldz=False)
     plt.plot(df_better.index, df_better.values, label="Seasonal Demand Scaling (+ No Non-Residential)")
 
-    df_better = demand_model.demand_scaling(old_gas_data=True, filter_ldz=False)
+    df_better = demand_model.seasonal_demand_scaling(old_gas_data=True, filter_ldz=False)
     plt.plot(df_better.index, df_better.values, label="Seasonal Demand Scaling (+ Old gas data)")
 
     plt.xlabel("Day of Year")

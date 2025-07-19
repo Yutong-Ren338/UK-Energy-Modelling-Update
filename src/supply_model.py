@@ -36,15 +36,18 @@ def get_net_supply(demand_data: str = "era5", *, naive_demand_scaling: bool = Fa
                       Negative values indicate demand exceeds supply.
     """
     # get demand
-    raw_demand_df = demand_model.historical_electricity_demand(demand_data)
-    demand_df = demand_model.naive_demand_scaling(raw_demand_df) if naive_demand_scaling else demand_model.demand_scaling(demand_data=demand_data)
+    historical_demand_df = demand_model.historical_electricity_demand(demand_data)
+    projected_demand_df = (
+        demand_model.naive_demand_scaling(historical_demand_df)
+        if naive_demand_scaling
+        else demand_model.seasonal_demand_scaling(demand_data=demand_data)
+    )
 
     # Repeat the average year to match the original dataframe length
-    num_years = len(raw_demand_df) // len(demand_df)
-    remaining_days = len(raw_demand_df) % len(demand_df)
-    repeated_demand = pd.concat([demand_df] * num_years + [demand_df.iloc[:remaining_days]])
-    repeated_demand.index = raw_demand_df.index
-    raw_demand_df["demand"] = repeated_demand
+    num_years = len(historical_demand_df) // len(projected_demand_df)
+    remaining_days = len(historical_demand_df) % len(projected_demand_df)
+    repeated_demand = pd.concat([projected_demand_df] * num_years + [projected_demand_df.iloc[:remaining_days]])
+    repeated_demand.index = historical_demand_df.index
 
     # get output for a range of renewable capacities
     daily_capacity_factors = renewable_capacity_factors.get_renewable_capacity_factors(resample="D")
@@ -52,12 +55,12 @@ def get_net_supply(demand_data: str = "era5", *, naive_demand_scaling: bool = Fa
     supply_df = pd.DataFrame({capacity.magnitude: daily_renewables_capacity(capacity, daily_capacity_factors) for capacity in renewable_capacities})
 
     # reindex for subtraction
-    common_idx = supply_df.index.intersection(raw_demand_df.index)
+    common_idx = supply_df.index.intersection(historical_demand_df.index)
     supply_df = supply_df.reindex(common_idx)
-    raw_demand_df = raw_demand_df.reindex(common_idx)
+    repeated_demand = repeated_demand.reindex(common_idx)
 
     # subtract the demand from the renewable generation to get the net demand
-    return supply_df.sub(raw_demand_df["demand"], axis=0)
+    return supply_df.sub(repeated_demand, axis=0)
 
 
 def fraction_days_without_excess(net_supply_df: pd.DataFrame, *, return_mean: bool = True) -> pd.Series:
@@ -77,3 +80,24 @@ def fraction_days_without_excess(net_supply_df: pd.DataFrame, *, return_mean: bo
     days_without_excess.name = "days_without_excess_generation"
 
     return days_without_excess
+
+
+def fraction_unmet_demand(net_supply_df: pd.DataFrame, demand_df: pd.Series) -> pd.Series:
+    """
+    Calculate the fraction of demand that is unmet for a range of renewable capacities.
+
+    Args:
+        net_supply_df: DataFrame with renewable capacity as columns and daily net supply (supply - demand) as values.
+        demand_df: Series with daily demand values.
+
+    Returns:
+        pd.Series: A series with renewable capacity as index and the fraction of unmet demand as values.
+    """
+    # only look at days where demand is greater than supply
+
+    unmet_demand = net_supply_df.clip(upper=0).abs().sum(axis=0)
+    unmet_demand_fraction = unmet_demand / demand_df.sum()
+    unmet_demand_fraction.index.name = "renewable_capacity_GW"
+    unmet_demand_fraction.name = "fraction_unmet_demand"
+
+    return unmet_demand_fraction

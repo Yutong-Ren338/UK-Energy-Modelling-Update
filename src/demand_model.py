@@ -126,7 +126,7 @@ def naive_demand_scaling(df: pd.DataFrame) -> pd.DataFrame:
     return average_year * A.EnergyDemand2050 / 365 / average_year.mean()
 
 
-def demand_scaling(demand_data: str = "era5", *, old_gas_data: bool = False, filter_ldz: bool = True) -> pd.DataFrame:
+def seasonal_demand_scaling(demand_data: str = "era5", *, old_gas_data: bool = False, filter_ldz: bool = True) -> pd.DataFrame:
     """
     Scale the demand data to 2050 levels, taking into account increased seasonality from electrification
     of space heating and hot water.
@@ -143,10 +143,9 @@ def demand_scaling(demand_data: str = "era5", *, old_gas_data: bool = False, fil
 
     df_combined = combined_seasonality_index(demand_data=demand_data, old_gas_data=old_gas_data, filter_ldz=filter_ldz)
 
+    # get the daily heating demand
     total_2050_heat_demand = A.CB7EnergyDemand2050Buildings * A.CB7FractionHeatDemandBuildings
     daily_2050_heat_demand = total_2050_heat_demand / 365
-
-    # get the daily heating demand
     daily_heating_demand = daily_2050_heat_demand * df_combined["seasonality_index_gas"]
 
     # daily non-heating demand
