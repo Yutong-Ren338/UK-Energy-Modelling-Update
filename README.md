@@ -1,7 +1,27 @@
 ### UK-Energy-Model-with-CO2-Removal
 
-This repository contains the Python codes and datasets for a simple 2050 UK Energy Model
+This repository contains the Python codes and datasets for a simple 2050 UK Energy Model.
 
+### Getting started
+
+To get started, clone the repository and install the required dependencies with `uv`:
+
+```bash
+uv install
+```
+
+Run tests to ensure everything is working correctly:
+
+```bash
+uv run pytest
+```
+
+Check code style with `ruff`:
+
+```bash
+uv run ruff check .
+uv run ruff format .
+```
 
 ### Data Sources
 
