@@ -20,4 +20,4 @@ jobs:
         with:
           name: test-results
           if-no-files-found: error
-          path: tests/output/*.png
+          path: tests/output/**/*.png
