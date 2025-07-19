@@ -17,7 +17,7 @@ def frac_heat_demand_from_buildings() -> float:
     under the Balanced Pathway scenario.
 
     Returns:
-        float: Fraction of energy demand that is for heating (expected ~0.597)
+        Fraction of energy demand that is for heating (expected ~0.597)
     """
     data_path = DATA_PATH / "The-Seventh-Carbon-Budget-full-dataset.xlsx"
 
@@ -40,13 +40,15 @@ def frac_heat_demand_from_buildings() -> float:
 
 
 def buildings_electricity_demand(*, include_non_residential: bool = True) -> float:
-    """Calculate the total electricity demand for UK residential and non-residential buildings in 2050 in TWh.
+    """Calculate the total electricity demand for UK buildings in 2050 in TWh.
+
+    Calculates for residential and non-residential buildings.
 
     Args:
-        include_non_residential (bool): If True, includes non-residential buildings in the calculation.
+        include_non_residential: If True, includes non-residential buildings in the calculation.
 
     Returns:
-        float: Total electricity demand for buildings in 2050 in TWh.
+        Total electricity demand for buildings in 2050 in TWh.
     """
     data_path = DATA_PATH / "The-Seventh-Carbon-Budget-full-dataset.xlsx"
     df = pd.read_excel(data_path, sheet_name="Sector-level data")
@@ -65,7 +67,7 @@ def total_demand_2050() -> float:
     """Calculate the total electricity demand for the UK in 2050 in TWh.
 
     Returns:
-        float: Total energy demand for buildings in 2050 in TWh.
+        Total energy demand for buildings in 2050 in TWh.
     """
     data_path = DATA_PATH / "The-Seventh-Carbon-Budget-full-dataset.xlsx"
     df = pd.read_excel(data_path, sheet_name="Economy-wide data")
@@ -122,13 +124,14 @@ def extract_daily_2050_demand() -> None:
 
 def cb7_demand(total_yearly_demand: Quantity) -> pd.DataFrame:
     """Load and return the CCC 2050 demand data for the UK.
+
     Loads the data from the preprocessed CSV file created by `extract_daily_2050_demand`.
 
     Args:
-        total_yearly_demand (Quantity): The total yearly demand in TWh, used to scale the daily demand.
+        total_yearly_demand: The total yearly demand in TWh, used to scale the daily demand.
 
     Returns:
-        pd.DataFrame: DataFrame containing the demand data in GW.
+        DataFrame containing the demand data in GW.
     """
     df = pd.read_csv(DATA_PATH / "ccc_daily_demand_2050.csv")
     df["date"] = pd.to_datetime(df["datetime"])

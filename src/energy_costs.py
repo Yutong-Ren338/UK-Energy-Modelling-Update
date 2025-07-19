@@ -4,15 +4,17 @@ import src.assumptions as A
 
 
 def yearly_dac_energy_cost(mt_co2: float, energy_cost: float, storage_energy_cost: float) -> float:
-    """Calculate the total energy cost for Direct Air Capture (DAC) based on the amount of CO2 in Mt and the energy cost.
+    """Calculate the total energy cost for Direct Air Capture (DAC).
+
+    Calculates cost based on the amount of CO2 in Mt and the energy cost.
 
     Args:
-        mt_co2 (float): Amount of CO2 in megatons.
-        energy_cost (float): Energy cost in kJ/mol CO2.
-        storage_energy_cost (float): Additional storage energy cost in TWh.
+        mt_co2: Amount of CO2 in megatons.
+        energy_cost: Energy cost in kJ/mol CO2.
+        storage_energy_cost: Additional storage energy cost in TWh.
 
     Returns:
-        float: Total energy cost in TWh.
+        Total energy cost in TWh.
     """
     # Convert Mt CO2 to grams
     grams_co2 = mt_co2 * 1e6 * 1e6  # Mt -> t -> g
@@ -33,12 +35,12 @@ def yearly_dac_energy_cost_cumulative(cum_mt_co2: float, energy_cost: float, sto
     """Calculate the cumulative energy cost for Direct Air Capture (DAC) over a number of years.
 
     Args:
-        cum_mt_co2 (float): Cumulative amount of CO2 in megatons.
-        energy_cost (float): Energy cost in kJ/mol CO2.
-        storage_energy_cost (float): Additional storage energy cost in TWh.
-        num_years (int): Number of years over which the cost is calculated.
+        cum_mt_co2: Cumulative amount of CO2 in megatons.
+        energy_cost: Energy cost in kJ/mol CO2.
+        storage_energy_cost: Additional storage energy cost in TWh.
+        num_years: Number of years over which the cost is calculated.
 
     Returns:
-        float: Cumulative energy cost in TWh.
+        Cumulative energy cost in TWh.
     """
     return yearly_dac_energy_cost(cum_mt_co2, energy_cost, storage_energy_cost) / num_years

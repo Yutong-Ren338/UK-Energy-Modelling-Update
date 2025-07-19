@@ -3,16 +3,17 @@ from src.units import Units as U
 
 
 def yearly_cost(capacity: float, capacity_factor: float, lcoe: float) -> float:
-    """Calculate the total yearly cost of an energy source based on its installed capacity,
-    capacity factor, and levelized cost of energy (LCOE).
+    """Calculate the total yearly cost of an energy source.
+
+    Calculates cost based on its installed capacity, capacity factor, and levelized cost of energy (LCOE).
 
     Args:
-        capacity (float): Installed capacity in GW.
-        capacity_factor (float): Capacity factor as a fraction (0.0 to 1.0).
-        lcoe (float): Levelized Cost of Energy in GBP/MWh.
+        capacity: Installed capacity in GW.
+        capacity_factor: Capacity factor as a fraction (0.0 to 1.0).
+        lcoe: Levelized Cost of Energy in GBP/MWh.
 
     Returns:
-        float: Total yearly cost in GBP.
+        Total yearly cost in GBP.
     """
     # Calculate the annual energy production in GWh
     annual_energy_production = capacity * capacity_factor * A.HoursPerYear
@@ -26,15 +27,17 @@ def total_storage_cost(
     electrolyser_power: float,
     generation_capacity: float,
 ) -> float:
-    """Calculate the total cost of energy storage, including electrolysis, storage, and generation costs.
+    """Calculate the total cost of energy storage.
+
+    Includes electrolysis, storage, and generation costs.
 
     Args:
-        storage_capacity (float): Storage capacity in kWh.
-        electrolyser_power (float): Power of the electrolyser in kW.
-        generation_capacity (float): Generation capacity in kW.
+        storage_capacity: Storage capacity in kWh.
+        electrolyser_power: Power of the electrolyser in kW.
+        generation_capacity: Generation capacity in kW.
 
     Returns:
-        float: Total cost of energy storage in GBP.
+        Total cost of energy storage in GBP.
     """
     storage_cost = storage_capacity * A.HydrogenStorage.CavernStorage.AnnualisedCost
     electrolyser_cost = electrolyser_power * A.HydrogenStorage.Electrolysis.AnnualisedCost
@@ -48,16 +51,18 @@ def total_system_cost(
     electrolyser_power: float,
     generation_capacity: float,
 ) -> float:
-    """Calculate the total system cost, including renewable energy, storage, electrolysis, and generation costs.
+    """Calculate the total system cost.
+
+    Includes renewable energy, storage, electrolysis, and generation costs.
 
     Args:
-        renewable_capacity (float): Renewable energy capacity in GW.
-        storage_capacity (float): Storage capacity in kWh.
-        electrolyser_power (float): Power of the electrolyser in kW.
-        generation_capacity (float): Generation capacity in kW.
+        renewable_capacity: Renewable energy capacity in GW.
+        storage_capacity: Storage capacity in kWh.
+        electrolyser_power: Power of the electrolyser in kW.
+        generation_capacity: Generation capacity in kW.
 
     Returns:
-        float: Total system cost in GBP.
+        Total system cost in GBP.
     """
     renewable_cost = yearly_cost(
         capacity=renewable_capacity,
@@ -75,15 +80,16 @@ def total_system_cost(
 
 
 def energy_cost(system_cost: float, energy_demand: float) -> float:
-    """Calculate the cost of energy per MWh based on the total system cost and energy demand
-    (the energy delivered by the system).
+    """Calculate the cost of energy per MWh.
+
+    Calculates cost based on the total system cost and energy demand (the energy delivered by the system).
 
     Args:
-        system_cost (float): Total system cost in GBP.
-        energy_demand (float): Total energy demand in MWh.
+        system_cost: Total system cost in GBP.
+        energy_demand: Total energy demand in MWh.
 
     Returns:
-        float: Cost of energy in GBP/MWh.
+        Cost of energy in GBP/MWh.
     """
     return (system_cost / energy_demand).to(U.GBP / U.MWh)
 

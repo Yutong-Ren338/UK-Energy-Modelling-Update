@@ -5,14 +5,16 @@ from src.units import Units as U
 
 
 def convert_energy_cost(energy_cost_per_mol: Quantity, molecular_weight: Quantity) -> Quantity:
-    """Convert energy cost from kJ/mol to TWh/Mt using the molecular weight of CO2.
+    """Convert energy cost from kJ/mol to TWh/Mt.
+
+    Uses the molecular weight of CO2.
 
     Args:
-        energy_cost_per_mol (Quantity): Energy cost in kJ/mol.
-        molecular_weight (Quantity): Molecular weight in g/mol.
+        energy_cost_per_mol: Energy cost in kJ/mol.
+        molecular_weight: Molecular weight in g/mol.
 
     Returns:
-        Quantity: Energy cost in TWh/Mt.
+        Energy cost in TWh/Mt.
     """
     assert energy_cost_per_mol.units == U.kJ / U.mol, "Input must be in kJ/mol"
     return (energy_cost_per_mol / molecular_weight).to(U.TWh / U.Mt)
@@ -56,18 +58,20 @@ def rolling_mean_circular(df: pd.DataFrame, column: str, window_size: int) -> pd
 
 
 def annualised_cost(capex: float, opex: float, lifetime: int, discount_rate: float, efficiency: float = 1.0) -> float:
-    """Calculate the annualised cost of a project given its capital expenditure (capex), operational expenditure (opex),
+    """Calculate the annualised cost of a project.
+
+    Calculates cost given its capital expenditure (capex), operational expenditure (opex),
     lifetime in years, and discount rate.
 
     Args:
-        capex (float): Capital expenditure.
-        opex (float): Annual operational expenditure.
-        lifetime (int): Lifetime of the project in years.
-        discount_rate (float): Discount rate as a decimal.
-        efficiency (float): Efficiency factor for the project.
+        capex: Capital expenditure.
+        opex: Annual operational expenditure.
+        lifetime: Lifetime of the project in years.
+        discount_rate: Discount rate as a decimal.
+        efficiency: Efficiency factor for the project.
 
     Returns:
-        float: Annualised cost.
+        Annualised cost.
     """
     assert 0 <= discount_rate < 1, "Discount rate must be between 0 and 1"
     assert lifetime > 0, "Lifetime must be greater than 0"

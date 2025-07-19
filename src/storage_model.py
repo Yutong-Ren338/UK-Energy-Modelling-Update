@@ -34,11 +34,11 @@ class StorageModel:
         """Initialize the storage model with required parameters.
 
         Args:
-            renewable_capacity: Renewable capacity in GW
-            max_storage_capacity: Maximum storage capacity in TWh
-            electrolyser_power: Electrolyser power in GW
-            dac_capacity: DAC capacity in GW
-            only_dac_if_storage_full: Whether DAC only operates when storage is full
+            renewable_capacity: Renewable capacity in GW.
+            max_storage_capacity: Maximum storage capacity in TWh.
+            electrolyser_power: Electrolyser power in GW.
+            dac_capacity: DAC capacity in GW.
+            only_dac_if_storage_full: Whether DAC only operates when storage is full.
         """
         # check pint units before running
         assert renewable_capacity.units == U.GW, "Renewable capacity must be in GW"
@@ -69,11 +69,11 @@ class StorageModel:
         """Process a single timestep of the simulation.
 
         Args:
-            supply_demand: Energy supply minus demand for this timestep
-            prev_storage: Storage level from previous timestep
+            supply_demand: Energy supply minus demand for this timestep.
+            prev_storage: Storage level from previous timestep.
 
         Returns:
-            Tuple of (storage_level, residual_energy, dac_energy, unused_energy)
+            Tuple of (storage_level, residual_energy, dac_energy, unused_energy).
         """
         if supply_demand <= 0:
             # Energy shortage - draw from storage
@@ -93,11 +93,11 @@ class StorageModel:
         """Process a timestep with energy surplus.
 
         Args:
-            supply_demand: Energy supply minus demand for this timestep
-            prev_storage: Storage level from previous timestep
+            supply_demand: Energy supply minus demand for this timestep.
+            prev_storage: Storage level from previous timestep.
 
         Returns:
-            Tuple of (storage_level, residual_energy, dac_energy, unused_energy)
+            Tuple of (storage_level, residual_energy, dac_energy, unused_energy).
         """
         energy_available_for_electrolyser = min(supply_demand, self.electrolyser_max_daily_energy)
         energy_to_store = energy_available_for_electrolyser * self.e_in
@@ -130,10 +130,10 @@ class StorageModel:
         Optimized vectorized version that avoids slow .loc assignments in loops.
 
         Args:
-            net_supply_df: DataFrame containing supply-demand data
+            net_supply_df: DataFrame containing supply-demand data.
 
         Returns:
-            DataFrame with simulation results added as new columns
+            DataFrame with simulation results added as new columns.
         """
         # Create a copy to avoid modifying the original DataFrame
         df = net_supply_df.copy()
@@ -188,10 +188,10 @@ class StorageModel:
         """Analyze simulation results and return key metrics.
 
         Args:
-            net_supply_df: DataFrame containing simulation results
+            net_supply_df: DataFrame containing simulation results.
 
         Returns:
-            Dictionary containing analysis metrics
+            Dictionary containing analysis metrics.
         """
         # Define column names
         storage_column = f"L (TWh),RC={int(self.renewable_capacity)}GW"

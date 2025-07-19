@@ -6,14 +6,16 @@ from src.units import Units as U
 
 
 def daily_renewables_capacity(renewable_capacity: float, capacity_factors: pd.DataFrame) -> pd.DataFrame:
-    """Calculate the daily renewable generation capacity based on the given renewable capacity and capacity factors.
+    """Calculate the daily renewable generation capacity.
+
+    Calculates capacity based on the given renewable capacity and capacity factors.
 
     Args:
-        renewable_capacity (float): Total renewable capacity.
-        capacity_factors (pd.DataFrame): DataFrame containing daily capacity factors for solar, offshore wind, and onshore wind.
+        renewable_capacity: Total renewable capacity.
+        capacity_factors: DataFrame containing daily capacity factors for solar, offshore wind, and onshore wind.
 
     Returns:
-        pd.DataFrame: A DataFrame with daily renewable generation capacity.
+        A DataFrame with daily renewable generation capacity.
     """
     solar = renewable_capacity * A.Renewables.CapacityRatios.Solar * capacity_factors["solar"]
     offshore_wind = renewable_capacity * A.Renewables.CapacityRatios.OffshoreWind * capacity_factors["offshore"]
@@ -29,8 +31,8 @@ def get_net_supply(demand_df: pd.DataFrame) -> pd.DataFrame:
         demand_df: DataFrame containing the projected 2050 demand data.
 
     Returns:
-        pd.DataFrame: DataFrame with renewable capacity as columns and daily net demand (supply - demand) as values.
-                      Negative values indicate demand exceeds supply.
+        DataFrame with renewable capacity as columns and daily net demand (supply - demand) as values.
+        Negative values indicate demand exceeds supply.
     """
     # get output for a range of renewable capacities
     daily_capacity_factors = renewable_capacity_factors.get_renewable_capacity_factors(resample="D")
@@ -48,14 +50,16 @@ def get_net_supply(demand_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def fraction_days_without_excess(net_supply_df: pd.DataFrame, *, return_mean: bool = True) -> pd.Series:
-    """Calculate the fraction of days without excess renewable generation for a range of renewable capacities.
+    """Calculate the fraction of days without excess renewable generation.
+
+    Calculates for a range of renewable capacities.
 
     Args:
-        net_supply_df (pd.DataFrame): DataFrame with renewable capacity as columns and daily net supply (supply - demand) as values.
-        return_mean (bool): If True, return the mean fraction of days without excess generation.
+        net_supply_df: DataFrame with renewable capacity as columns and daily net supply (supply - demand) as values.
+        return_mean: If True, return the mean fraction of days without excess generation.
 
     Returns:
-        pd.Series: A series with renewable capacity as index and the number of days without excess generation as values.
+        A series with renewable capacity as index and the number of days without excess generation as values.
     """
     # count the number of days without excess generation (where net supply is negative)
     days_without_excess = (net_supply_df < 0).mean(axis=0) if return_mean else (net_supply_df < 0).sum(axis=0)

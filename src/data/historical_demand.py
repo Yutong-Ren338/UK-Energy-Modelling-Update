@@ -11,12 +11,12 @@ HistoricalDemandSource = Literal["era5", "espeni"]
 def demand_era5(resample: str | None = None, *, weather_adjusted: bool = False) -> pd.DataFrame:
     """Load and return the ERA5 full electricity demand data for the UK.
 
-    Arguments:
+    Args:
         resample: Resampling rule for the time series data (e.g., 'D' for daily, 'M' for monthly).
         weather_adjusted: If True, return weather-adjusted demand; otherwise, return raw demand.
 
     Returns:
-        pd.DataFrame: DataFrame containing the demand data in GW.
+        DataFrame containing the demand data in GW.
     """
     if weather_adjusted:
         data_file = DATA_DIR / "ERA5_weather_dependent_demand_UK_1979_2019_hourly.csv"
@@ -36,11 +36,11 @@ def demand_era5(resample: str | None = None, *, weather_adjusted: bool = False) 
 def demand_espeni(resample: str | None = None) -> pd.DataFrame:
     """Load and return the Espeni full electricity demand data for the UK.
 
-    Arguments:
-        resample (str | None): Resampling rule for the time series data (e.g., 'D' for daily, 'M' for monthly).
+    Args:
+        resample: Resampling rule for the time series data (e.g., 'D' for daily, 'M' for monthly).
 
     Returns:
-        pd.DataFrame: DataFrame containing the demand data in GW.
+        DataFrame containing the demand data in GW.
     """
     # demand is in MW
     df = pd.read_csv(DATA_DIR / "espeni.csv")
@@ -62,7 +62,7 @@ def historical_electricity_demand(source: HistoricalDemandSource = "era5") -> pd
         source: The source of demand data, either "era5" or "espeni".
 
     Returns:
-        pd.DataFrame: DataFrame with daily demand values.
+        DataFrame with daily demand values.
 
     Raises:
         ValueError: If source is not "era5" or "espeni".
@@ -78,11 +78,11 @@ def historical_gas_demand(*, old_gas_data: bool = False, filter_ldz: bool = True
     """Load and return the gas demand data for the UK.
 
     Args:
-        old_gas_data (bool): If True, use the old gas demand data.
-        filter_ldz (bool): If True, filter the data for "NTS Energy Offtaken, LDZ Offtake Total".
+        old_gas_data: If True, use the old gas demand data.
+        filter_ldz: If True, filter the data for "NTS Energy Offtaken, LDZ Offtake Total".
 
     Returns:
-        pd.DataFrame: DataFrame containing the gas demand data.
+        DataFrame containing the gas demand data.
     """
     data_dir = Path(__file__).parents[2] / "data"
     if old_gas_data:
