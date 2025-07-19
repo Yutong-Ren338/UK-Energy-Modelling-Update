@@ -1,10 +1,8 @@
-import sys
 from pathlib import Path
 
 import numpy as np
 
 # test artifacts
-sys.path.append(str(Path(__file__).parent.parent))
 OUTPUT_DIR = Path("tests/output")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
