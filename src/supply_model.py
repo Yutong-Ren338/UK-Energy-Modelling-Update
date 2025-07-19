@@ -40,7 +40,7 @@ def get_net_supply(demand_data: str = "era5", *, naive_demand_scaling: bool = Fa
     projected_demand_df = (
         demand_model.naive_demand_scaling(historical_demand_df)
         if naive_demand_scaling
-        else demand_model.seasonal_demand_scaling(demand_data=demand_data)
+        else demand_model.seasonal_demand_scaling(historical_demand_df)
     )
 
     # Repeat the average year to match the original dataframe length
