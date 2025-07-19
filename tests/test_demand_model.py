@@ -111,7 +111,6 @@ def test_seasonal_demand_scaling_options() -> None:
 
 def test_predicted_demand() -> None:
     """Test the predicted demand for 2050."""
-
     demands = {}
     for mode in ["naive", "seasonal", "cb7"]:
         df = demand_model.predicted_demand(mode=mode, average_year=True)
