@@ -1,0 +1,8 @@
+pandas
+matplotlib
+numpy
+pint
+pint-pandas
+requests
+pytest
+openpyxl

@@ -9,9 +9,9 @@ def scrape_uk_gas_data(date_from: str, date_to: str, output_filename: str) -> No
     """Scrape UK gas demand data from National Gas API.
 
     Args:
-        date_from (str): Start date in 'YYYY-MM-DD' format
-        date_to (str): End date in 'YYYY-MM-DD' format
-        output_filename (str): Full path to the output CSV file
+        date_from: Start date in 'YYYY-MM-DD' format
+        date_to: End date in 'YYYY-MM-DD' format
+        output_filename: Full path to the output CSV file
 
     Raises:
         RuntimeError: If the API request fails or returns an error status.
@@ -44,8 +44,8 @@ def preprocess_gas_data(input_filename: str, output_filename: str) -> None:
     keeping newer data for overlapping dates.
 
     Args:
-        input_filename (str): Path to the input CSV file
-        output_filename (str): Path to save the processed CSV file
+        input_filename: Path to the input CSV file
+        output_filename: Path to save the processed CSV file
     """
     # Read the CSV file
     df = pd.read_csv(input_filename)

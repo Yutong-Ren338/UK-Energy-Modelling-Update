@@ -7,11 +7,11 @@ from src.units import Units as U
 def get_renewable_capacity_factors(resample: str | None = None) -> pd.DataFrame:
     """Load and return the renewable capacity factors for the UK.
 
-    Arguments:
-        resample (str): Resampling rule for the time series data (e.g., 'D' for daily, 'M' for monthly).
+    Args:
+        resample: Resampling rule for the time series data (e.g., 'D' for daily, 'M' for monthly).
 
     Returns:
-        pd.DataFrame: DataFrame containing the capacity factors for PV and wind.
+        DataFrame containing the capacity factors for PV and wind.
     """
     pv_fname = DATA_DIR / "ninja_pv_country_GB_merra-2_corrected.csv"
     wind_fname = DATA_DIR / "ninja_wind_country_GB_current-merra-2_corrected.csv"

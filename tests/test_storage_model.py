@@ -24,21 +24,13 @@ class TestStorageModel:
 
     @pytest.fixture
     def sample_data(self) -> pd.DataFrame:
-        """Load the test data for simulations.
-
-        Returns:
-            DataFrame containing test simulation data.
-        """
+        """Load the test data for simulations."""
         test_data_path = Path(__file__).parent / "rei_net_supply_df_12gw_nuclear.csv"
         return pd.read_csv(test_data_path)
 
     @pytest.fixture
     def storage_model(self) -> StorageModel:
-        """Create a StorageModel instance for testing.
-
-        Returns:
-            StorageModel instance with standard test parameters.
-        """
+        """Create a StorageModel instance for testing."""
         return StorageModel(**SIMULATION_KWARGS)
 
     def test_run_simulation_with_expected_outputs(self, storage_model: StorageModel, sample_data: pd.DataFrame) -> None:
