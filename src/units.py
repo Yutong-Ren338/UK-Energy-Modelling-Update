@@ -9,7 +9,7 @@ ureg.define("GBP = [currency]")
 
 
 class Units:
-    """Alias some common units for convenience"""
+    """Alias some common units for convenience."""
 
     # dimensionless
     dimensionless = ureg.dimensionless

@@ -6,8 +6,7 @@ import requests
 
 
 def scrape_uk_gas_data(date_from: str, date_to: str, output_filename: str) -> None:
-    """
-    Scrape UK gas demand data from National Gas API.
+    """Scrape UK gas demand data from National Gas API.
 
     Args:
         date_from (str): Start date in 'YYYY-MM-DD' format
@@ -37,8 +36,7 @@ def scrape_uk_gas_data(date_from: str, date_to: str, output_filename: str) -> No
 
 
 def preprocess_gas_data(input_filename: str, output_filename: str) -> None:
-    """
-    Preprocess the scraped gas demand CSV data.
+    """Preprocess the scraped gas demand CSV data.
 
     Keeps only 'Applicable For', 'Data Item', and 'Value' columns,
     and converts values from kWh to TWh by dividing by 10^9.

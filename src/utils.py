@@ -56,8 +56,7 @@ def rolling_mean_circular(df: pd.DataFrame, column: str, window_size: int) -> pd
 
 
 def annualised_cost(capex: float, opex: float, lifetime: int, discount_rate: float, efficiency: float = 1.0) -> float:
-    """
-    Calculate the annualised cost of a project given its capital expenditure (capex), operational expenditure (opex),
+    """Calculate the annualised cost of a project given its capital expenditure (capex), operational expenditure (opex),
     lifetime in years, and discount rate.
 
     Args:
@@ -65,7 +64,7 @@ def annualised_cost(capex: float, opex: float, lifetime: int, discount_rate: flo
         opex (float): Annual operational expenditure.
         lifetime (int): Lifetime of the project in years.
         discount_rate (float): Discount rate as a decimal.
-    efficiency (float): Efficiency factor for the project.
+        efficiency (float): Efficiency factor for the project.
 
     Returns:
         float: Annualised cost.

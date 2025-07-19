@@ -31,8 +31,7 @@ class StorageModel:
         *,
         only_dac_if_storage_full: bool = True,
     ) -> None:
-        """
-        Initialize the storage model with required parameters.
+        """Initialize the storage model with required parameters.
 
         Args:
             renewable_capacity: Renewable capacity in GW
@@ -41,7 +40,6 @@ class StorageModel:
             dac_capacity: DAC capacity in GW
             only_dac_if_storage_full: Whether DAC only operates when storage is full
         """
-
         # check pint units before running
         assert renewable_capacity.units == U.GW, "Renewable capacity must be in GW"
         assert max_storage_capacity.units == U.TWh, "Max storage capacity must be in TWh"
@@ -68,8 +66,7 @@ class StorageModel:
         self.only_dac_if_storage_full = only_dac_if_storage_full
 
     def _process_timestep(self, supply_demand: float, prev_storage: float) -> tuple[float, float, float, float]:
-        """
-        Process a single timestep of the simulation.
+        """Process a single timestep of the simulation.
 
         Args:
             supply_demand: Energy supply minus demand for this timestep
@@ -93,8 +90,7 @@ class StorageModel:
         return self._process_energy_surplus_timestep(supply_demand, prev_storage)
 
     def _process_energy_surplus_timestep(self, supply_demand: float, prev_storage: float) -> tuple[float, float, float, float]:
-        """
-        Process a timestep with energy surplus.
+        """Process a timestep with energy surplus.
 
         Args:
             supply_demand: Energy supply minus demand for this timestep
@@ -129,8 +125,7 @@ class StorageModel:
         return (new_storage_level, residual_energy_val, dac_energy_val, residual_energy_val - dac_energy_val)
 
     def run_simulation(self, net_supply_df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Run energy storage simulation for this renewable capacity scenario.
+        """Run energy storage simulation for this renewable capacity scenario.
 
         Optimized vectorized version that avoids slow .loc assignments in loops.
 
@@ -190,8 +185,7 @@ class StorageModel:
         assert (df[columns.storage_level] >= 0).all(), "Storage levels cannot be negative"
 
     def analyze_simulation_results(self, net_supply_df: pd.DataFrame) -> dict:
-        """
-        Analyze simulation results and return key metrics.
+        """Analyze simulation results and return key metrics.
 
         Args:
             net_supply_df: DataFrame containing simulation results
@@ -199,7 +193,6 @@ class StorageModel:
         Returns:
             Dictionary containing analysis metrics
         """
-
         # Define column names
         storage_column = f"L (TWh),RC={int(self.renewable_capacity)}GW"
         dac_column = f"R_dac (TWh),RC={int(self.renewable_capacity)}GW"

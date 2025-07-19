@@ -3,8 +3,7 @@ from src.units import Units as U
 
 
 def yearly_cost(capacity: float, capacity_factor: float, lcoe: float) -> float:
-    """
-    Calculate the total yearly cost of an energy source based on its installed capacity,
+    """Calculate the total yearly cost of an energy source based on its installed capacity,
     capacity factor, and levelized cost of energy (LCOE).
 
     Args:
@@ -27,8 +26,7 @@ def total_storage_cost(
     electrolyser_power: float,
     generation_capacity: float,
 ) -> float:
-    """
-    Calculate the total cost of energy storage, including electrolysis, storage, and generation costs.
+    """Calculate the total cost of energy storage, including electrolysis, storage, and generation costs.
 
     Args:
         storage_capacity (float): Storage capacity in kWh.
@@ -50,8 +48,7 @@ def total_system_cost(
     electrolyser_power: float,
     generation_capacity: float,
 ) -> float:
-    """
-    Calculate the total system cost, including renewable energy, storage, electrolysis, and generation costs.
+    """Calculate the total system cost, including renewable energy, storage, electrolysis, and generation costs.
 
     Args:
         renewable_capacity (float): Renewable energy capacity in GW.
@@ -78,8 +75,7 @@ def total_system_cost(
 
 
 def energy_cost(system_cost: float, energy_demand: float) -> float:
-    """
-    Calculate the cost of energy per MWh based on the total system cost and energy demand
+    """Calculate the cost of energy per MWh based on the total system cost and energy demand
     (the energy delivered by the system).
 
     Args:

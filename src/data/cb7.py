@@ -10,8 +10,7 @@ DATA_PATH = Path(__file__).parents[2] / "data" / "new"
 
 
 def frac_heat_demand_from_buildings() -> float:
-    """
-    Calculate the fraction of energy demand from residential buildings that is for heating.
+    """Calculate the fraction of energy demand from residential buildings that is for heating.
 
     Analyzes the Seventh Carbon Budget dataset to determine what proportion of residential
     building energy demand (excluding other home energy use) comes from heating in 2050
@@ -41,8 +40,7 @@ def frac_heat_demand_from_buildings() -> float:
 
 
 def buildings_electricity_demand(*, include_non_residential: bool = True) -> float:
-    """
-    Calculate the total electricity demand for UK residential and non-residential buildings in 2050 in TWh.
+    """Calculate the total electricity demand for UK residential and non-residential buildings in 2050 in TWh.
 
     Args:
         include_non_residential (bool): If True, includes non-residential buildings in the calculation.
@@ -64,8 +62,7 @@ def buildings_electricity_demand(*, include_non_residential: bool = True) -> flo
 
 
 def total_demand_2050() -> float:
-    """
-    Calculate the total electricity demand for the UK in 2050 in TWh.
+    """Calculate the total electricity demand for the UK in 2050 in TWh.
 
     Returns:
         float: Total energy demand for buildings in 2050 in TWh.
@@ -80,8 +77,7 @@ def total_demand_2050() -> float:
 
 
 def extract_daily_2050_demand() -> None:
-    """
-    Extract the daily electricity demand for 2050 from the Seventh Carbon Budget dataset.
+    """Extract the daily electricity demand for 2050 from the Seventh Carbon Budget dataset.
 
     The dataset contains hourly demand data for different weather years, save it as daily for convenience.
     Note: the demands here are "generation level", rather than "end use" leve, which means they are around 11% large,
@@ -125,8 +121,7 @@ def extract_daily_2050_demand() -> None:
 
 
 def cb7_demand(total_yearly_demand: Quantity) -> pd.DataFrame:
-    """
-    Load and return the CCC 2050 demand data for the UK.
+    """Load and return the CCC 2050 demand data for the UK.
     Loads the data from the preprocessed CSV file created by `extract_daily_2050_demand`.
 
     Args:

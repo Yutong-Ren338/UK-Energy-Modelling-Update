@@ -41,24 +41,24 @@ GBPToEuro = 1.18  # Just use the number from the RS report
 
 
 class Renewables:
-    """Parameters for renewable energy technologies including solar, offshore wind, and onshore wind"""
+    """Parameters for renewable energy technologies including solar, offshore wind, and onshore wind."""
 
     class CapacityRatios:
-        """Mix ratios for different renewable technologies in the energy portfolio"""
+        """Mix ratios for different renewable technologies in the energy portfolio."""
 
         Solar = 0.2
         OffshoreWind = 0.56
         OnshoreWind = 0.24
 
     class CapacityFactors:
-        """Average capacity factors (fraction of nominal capacity achieved)"""
+        """Average capacity factors (fraction of nominal capacity achieved)."""
 
         Solar = 0.108
         OffshoreWind = 0.383  # 61% according to Department for Net Zero
         OnshoreWind = 0.293  # 45% according to Department for Net Zero
 
     class LCOE:
-        """Levelized Cost of Energy (Source: BEIS, 2023)"""
+        """Levelized Cost of Energy (Source: BEIS, 2023)."""
 
         Solar = 30.0 * U.GBP / U.MWh
         OffshoreWind = 41.0 * U.GBP / U.MWh
@@ -80,7 +80,7 @@ class Renewables:
 
 
 class DAC:
-    """Parameters for Direct Air Capture technology"""
+    """Parameters for Direct Air Capture technology."""
 
     # System capacity parameters
     Capacity = 27.0 * U.GW
@@ -88,7 +88,7 @@ class DAC:
     CarbonStorage = 7.5  # GBP/tonne CO2
 
     class EnergyCost:
-        """Energy requirements for DAC processes"""
+        """Energy requirements for DAC processes."""
 
         Low = 43 * U.kJ / U.mol
         Medium = 101 * U.kJ / U.mol
@@ -103,20 +103,20 @@ class DAC:
 
 
 class Nuclear:
-    """Parameters for nuclear power generation technologies"""
+    """Parameters for nuclear power generation technologies."""
 
     Capacity = 12 * U.GW
     CapacityFactor = 0.9  # Based on Hinkley Point C performance
 
     class CapacityRatios:
-        """Mix ratios for different nuclear technologies in the nuclear portfolio"""
+        """Mix ratios for different nuclear technologies in the nuclear portfolio."""
 
         Existing = 0.2  # Including Hinkley Point C
         LargeReactors = 0.2
         SmallReactors = 0.6  # Small modular reactors (SMRs)
 
     class LCOE:
-        """Levelized Cost of Energy for nuclear technologies"""
+        """Levelized Cost of Energy for nuclear technologies."""
 
         Existing = 130.0 * U.GBP / U.MWh
         LargeReactors = 80.0 * U.GBP / U.MWh
@@ -134,10 +134,10 @@ class Nuclear:
 # HYDROGEN STORAGE
 # ============================================================================
 class HydrogenStorage:
-    """Parameters for hydrogen energy storage system including electrolysis, cavern storage, and generation"""
+    """Parameters for hydrogen energy storage system including electrolysis, cavern storage, and generation."""
 
     class Electrolysis:
-        """Parameters for hydrogen generation via electrolysis"""
+        """Parameters for hydrogen generation via electrolysis."""
 
         # Source: IEA via RS report
 
@@ -150,7 +150,7 @@ class HydrogenStorage:
         AnnualisedCost = annualised_cost(Capex, Opex, Lifetime, DiscountRate)
 
     class CavernStorage:
-        """Parameters for large-scale hydrogen storage in underground caverns"""
+        """Parameters for large-scale hydrogen storage in underground caverns."""
 
         # For Capex, H21 NOE assumes £325M for 1.22 TWh. CS Smith et al (2023)
         # take the midpoint of 1-2x this number, which is £399.59M per TWh.
@@ -164,7 +164,7 @@ class HydrogenStorage:
         AnnualisedCost = annualised_cost(Capex, Opex, Lifetime, DiscountRate)
 
     class Generation:
-        """Parameters for electricity generation from stored hydrogen"""
+        """Parameters for electricity generation from stored hydrogen."""
 
         Efficiency = 0.55  # Converting stored hydrogen back to electricity
         Capex = 425 / GBPToUSD * U.GBP / U.kW

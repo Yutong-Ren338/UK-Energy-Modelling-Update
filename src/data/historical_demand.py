@@ -9,8 +9,7 @@ HistoricalDemandSource = Literal["era5", "espeni"]
 
 
 def demand_era5(resample: str | None = None, *, weather_adjusted: bool = False) -> pd.DataFrame:
-    """
-    Load and return the ERA5 full electricity demand data for the UK.
+    """Load and return the ERA5 full electricity demand data for the UK.
 
     Arguments:
         resample: Resampling rule for the time series data (e.g., 'D' for daily, 'M' for monthly).
@@ -35,8 +34,7 @@ def demand_era5(resample: str | None = None, *, weather_adjusted: bool = False) 
 
 
 def demand_espeni(resample: str | None = None) -> pd.DataFrame:
-    """
-    Load and return the Espeni full electricity demand data for the UK.
+    """Load and return the Espeni full electricity demand data for the UK.
 
     Arguments:
         resample (str | None): Resampling rule for the time series data (e.g., 'D' for daily, 'M' for monthly).
@@ -44,7 +42,6 @@ def demand_espeni(resample: str | None = None) -> pd.DataFrame:
     Returns:
         pd.DataFrame: DataFrame containing the demand data in GW.
     """
-
     # demand is in MW
     df = pd.read_csv(DATA_DIR / "espeni.csv")
     df = df[["ELEXM_utc", "POWER_ESPENI_MW"]]
@@ -59,8 +56,7 @@ def demand_espeni(resample: str | None = None) -> pd.DataFrame:
 
 
 def historical_electricity_demand(source: HistoricalDemandSource = "era5") -> pd.DataFrame:
-    """
-    Get raw demand data for analysis.
+    """Get raw demand data for analysis.
 
     Args:
         source: The source of demand data, either "era5" or "espeni".
@@ -79,8 +75,7 @@ def historical_electricity_demand(source: HistoricalDemandSource = "era5") -> pd
 
 
 def historical_gas_demand(*, old_gas_data: bool = False, filter_ldz: bool = True) -> pd.DataFrame:
-    """
-    Load and return the gas demand data for the UK.
+    """Load and return the gas demand data for the UK.
 
     Args:
         old_gas_data (bool): If True, use the old gas demand data.

@@ -10,8 +10,7 @@ DemandMode = Literal["naive", "seasonal", "cb7"]
 
 
 def naive_demand_scaling(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Get naive scaled demand data for analysis. This doesn't take into account increased seasonality
+    """Get naive scaled demand data for analysis. This doesn't take into account increased seasonality
     from electrification of space heating and hot water.
 
     Args:
@@ -20,7 +19,6 @@ def naive_demand_scaling(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         DataFrame with daily demand values scaled to 2050 levels.
     """
-
     # convert from GW to TWh
     df["demand"] *= A.HoursPerDay
 
@@ -35,8 +33,7 @@ def naive_demand_scaling(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def seasonality_index(df: pd.DataFrame, column: str, *, average_year: bool = False) -> pd.Series:
-    """
-    Calculate the seasonality index for a given column in the DataFrame.
+    """Calculate the seasonality index for a given column in the DataFrame.
 
     Args:
         df: DataFrame containing the historical demand data.
@@ -58,8 +55,7 @@ def seasonality_index(df: pd.DataFrame, column: str, *, average_year: bool = Fal
 
 
 def seasonal_demand_scaling(df: pd.DataFrame, *, old_gas_data: bool = False, filter_ldz: bool = True) -> pd.DataFrame:
-    """
-    Scale the electricity demand data, taking into account increased seasonality from electrification
+    """Scale the electricity demand data, taking into account increased seasonality from electrification
     of space heating and hot water.
 
     Use the raw historical electricity demand data, but average the gas data over different years.
@@ -107,8 +103,7 @@ def predicted_demand(
     filter_ldz: bool = True,
     average_year: bool = True,
 ) -> pd.DataFrame:
-    """
-    Get the predicted demand for 2050 based on the specified mode.
+    """Get the predicted demand for 2050 based on the specified mode.
 
     Args:
         mode: The mode of demand prediction.

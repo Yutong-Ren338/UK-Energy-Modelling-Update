@@ -6,8 +6,8 @@ from src.units import Units as U
 
 
 def daily_renewables_capacity(renewable_capacity: float, capacity_factors: pd.DataFrame) -> pd.DataFrame:
-    """
-    Calculate the daily renewable generation capacity based on the given renewable capacity and capacity factors.
+    """Calculate the daily renewable generation capacity based on the given renewable capacity and capacity factors.
+
     Args:
         renewable_capacity (float): Total renewable capacity.
         capacity_factors (pd.DataFrame): DataFrame containing daily capacity factors for solar, offshore wind, and onshore wind.
@@ -23,8 +23,7 @@ def daily_renewables_capacity(renewable_capacity: float, capacity_factors: pd.Da
 
 
 def get_net_supply(demand_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Get net supply dataframe (supply minus demand) for analysis.
+    """Get net supply dataframe (supply minus demand) for analysis.
 
     Args:
         demand_df: DataFrame containing the projected 2050 demand data.
@@ -33,7 +32,6 @@ def get_net_supply(demand_df: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame: DataFrame with renewable capacity as columns and daily net demand (supply - demand) as values.
                       Negative values indicate demand exceeds supply.
     """
-
     # get output for a range of renewable capacities
     daily_capacity_factors = renewable_capacity_factors.get_renewable_capacity_factors(resample="D")
     renewable_capacities = [x * U.GW for x in range(100, 500, 10)]
@@ -50,8 +48,7 @@ def get_net_supply(demand_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def fraction_days_without_excess(net_supply_df: pd.DataFrame, *, return_mean: bool = True) -> pd.Series:
-    """
-    Calculate the fraction of days without excess renewable generation for a range of renewable capacities.
+    """Calculate the fraction of days without excess renewable generation for a range of renewable capacities.
 
     Args:
         net_supply_df (pd.DataFrame): DataFrame with renewable capacity as columns and daily net supply (supply - demand) as values.
