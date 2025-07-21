@@ -98,9 +98,7 @@ def extract_daily_2050_demand() -> None:
     df = df.drop(columns=["Unnamed: 20"])
 
     # convert Year and Hour columns to datetime
-    df["hour_in_day"] = df["Hour"] % 24
-    df["day_of_year"] = df["Hour"] // 24
-    df["datetime"] = pd.to_datetime(df["Year"], format="%Y") + pd.to_timedelta(df["Hour"], unit="h")
+    df["datetime"] = pd.to_datetime(df["Year"], format="%Y") + pd.to_timedelta(df["Hour"] - 1, unit="h")
 
     # convert to TWh
     df["Electricity demand without electrolysis"] /= 1e3
@@ -114,9 +112,6 @@ def extract_daily_2050_demand() -> None:
         df_["weather year"] = weather_year
         dfs[weather_year] = df_
     df_combined = pd.concat(dfs.values(), ignore_index=True)
-
-    # remove rows with datetime with year != demand_year
-    df_combined = df_combined[df_combined["datetime"].dt.year == demand_year]
 
     # save as csv
     df_combined.to_csv(DATA_PATH / f"ccc_daily_demand_{demand_year}.csv", index=False)

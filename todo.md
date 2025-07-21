@@ -12,6 +12,7 @@
 
 ### Demand modelling
 
+- [ ] do better than averaging the gas demand (repeat it, or use a more sophisticated model)
 - [ ] look for updated version of ESPENI demand data
 - [ ] plug in different CCC demand scenarios
 - [ ] make it trivial to switch between seasonal, naive, and CCC demand models
