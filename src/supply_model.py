@@ -39,6 +39,9 @@ def get_net_supply(demand_df: pd.DataFrame) -> pd.DataFrame:
     renewable_capacities = [x * U.GW for x in range(100, 500, 10)]
     supply_df = pd.DataFrame({capacity.magnitude: daily_renewables_capacity(capacity, daily_capacity_factors) for capacity in renewable_capacities})
 
+    # apply losses to supply
+    supply_df *= 1 - A.EnergySystemLosses
+
     # reindex for subtraction
     common_idx = supply_df.index.intersection(demand_df.index)
     assert len(common_idx) > 0, "No common dates between supply and demand dataframes."

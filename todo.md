@@ -21,7 +21,7 @@
 ### Energy system modelling
 
 - [x] implement storage model
-- [ ] add losses from transmission and distribution
+- [x] add losses from transmission and distribution
     - FES 2025 states that transmission losses are around 2% today but increasing to 3% by 2050
     - Distribution losses are higher, typically around 5-8%
     - DUKES 2024 says that 2023 total losses are around 9%
