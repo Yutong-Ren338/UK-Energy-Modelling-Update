@@ -97,8 +97,8 @@ def extract_daily_2050_demand() -> None:
     # remove column
     df = df.drop(columns=["Unnamed: 20"])
 
-    # convert Year and Hour columns to datetime
-    df["datetime"] = pd.to_datetime(df["Year"], format="%Y") + pd.to_timedelta(df["Hour"] - 1, unit="h")
+    # convert Year and Hour columns to date
+    df["date"] = pd.to_datetime(df["Weather year"], format="%Y") + pd.to_timedelta(df["Hour"] - 1, unit="h")
 
     # convert to TWh
     df["Electricity demand without electrolysis"] /= 1e3
@@ -107,7 +107,7 @@ def extract_daily_2050_demand() -> None:
     dfs = {}
     for weather_year in df["Weather year"].unique():
         df_ = df[df["Weather year"] == weather_year].copy()
-        df_ = df_.resample("D", on="datetime")["Electricity demand without electrolysis"].sum().reset_index()
+        df_ = df_.resample("D", on="date")["Electricity demand without electrolysis"].sum().reset_index()
         df_ = df_.rename(columns={"Electricity demand without electrolysis": "demand (TWh)"})
         df_["weather year"] = weather_year
         dfs[weather_year] = df_
@@ -128,10 +128,9 @@ def cb7_demand(total_yearly_demand: Quantity) -> pd.DataFrame:
     Returns:
         DataFrame containing the demand data in GW.
     """
-    df = pd.read_csv(DATA_PATH / "ccc_daily_demand_2050.csv")
-    df["date"] = pd.to_datetime(df["datetime"])
-    df = df.set_index("date")
+    df = pd.read_csv(DATA_PATH / "ccc_daily_demand_2050.csv", index_col=0, parse_dates=True)
     df = df.rename(columns={"demand (TWh)": "demand"})
+    df.index.name = "date"
     df["demand"] = (df["demand"]).astype("pint[TWh]")
     df["demand"] *= total_yearly_demand * 3 / df["demand"].sum()
     return df
