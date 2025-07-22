@@ -124,7 +124,6 @@ def test_predicted_demand(*, average_year: bool) -> None:
         demands[mode] = df
 
     # plot
-    plt.figure(figsize=(10, 6))
     for mode, df in demands.items():
         plt.plot(df.index, df["demand"], label=f"Predicted Demand ({mode})")
     plt.xlabel("Day of Year")
