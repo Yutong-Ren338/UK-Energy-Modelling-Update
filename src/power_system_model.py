@@ -6,12 +6,13 @@ import pandas as pd
 import src.assumptions as A
 from src.units import Units as U
 
-# Energy Storage and DAC (Direct Air Capture) Simulation
-# Models energy storage filling/emptying and allocation of excess energy to DAC
+# Power System Model
+# Models renewable energy generation, storage systems, demand response, and excess energy allocation
+# Includes energy storage, Direct Air Capture (DAC), and curtailment strategies
 
 
 class SimulationColumns(NamedTuple):
-    """Container for simulation column names."""
+    """Container for power system simulation column names."""
 
     storage_level: str
     residual_energy: str
@@ -20,8 +21,13 @@ class SimulationColumns(NamedTuple):
     stored_energy: str
 
 
-class StorageModel:
-    """Energy storage simulation model with configurable parameters."""
+class PowerSystemModel:
+    """Comprehensive power system simulation model with configurable parameters.
+
+    Models the interaction between renewable energy generation, energy storage systems,
+    demand response, Direct Air Capture (DAC), and energy curtailment strategies.
+    Can be extended to include additional power system components and control strategies.
+    """
 
     def __init__(
         self,
@@ -32,13 +38,13 @@ class StorageModel:
         *,
         only_dac_if_storage_full: bool = True,
     ) -> None:
-        """Initialize the storage model with required parameters.
+        """Initialize the power system model with required parameters.
 
         Args:
-            renewable_capacity: Renewable capacity in GW.
-            max_storage_capacity: Maximum storage capacity in TWh.
-            electrolyser_power: Electrolyser power in GW.
-            dac_capacity: DAC capacity in GW.
+            renewable_capacity: Total renewable generation capacity in GW.
+            max_storage_capacity: Maximum energy storage capacity in TWh.
+            electrolyser_power: Power capacity for energy conversion to storage in GW.
+            dac_capacity: Direct Air Capture system capacity in GW.
             only_dac_if_storage_full: Whether DAC only operates when storage is full.
         """
         # check pint units before running
@@ -127,7 +133,7 @@ class StorageModel:
         return (new_storage_level, residual_energy_val, dac_energy_val, residual_energy_val - dac_energy_val, actual_energy_stored)
 
     def run_simulation(self, net_supply_df: pd.DataFrame) -> pd.DataFrame:
-        """Run energy storage simulation for this renewable capacity scenario.
+        """Run power system simulation for this renewable capacity scenario.
 
         Optimized vectorized version that avoids slow .loc assignments in loops.
 
@@ -205,26 +211,28 @@ class StorageModel:
         unused_column = f"curtailed_energy (TWh),RC={int(self.renewable_capacity)}GW"
 
         # Calculate key metrics
-        min_storage = net_supply_df[storage_column].min()
+        minimum_storage = net_supply_df[storage_column].min()
         annual_dac_energy = net_supply_df[dac_column].mean() * 365
         # Calculate capacity factor as actual usage vs maximum possible daily energy
         dac_capacity_factor = (net_supply_df[dac_column] > 0).mean()  # Simplified calculation based on operating days
         curtailed_energy = net_supply_df[unused_column].mean() * 365
 
         return {
-            "minimum_storage": min_storage,
+            "minimum_storage": minimum_storage,
             "annual_dac_energy": annual_dac_energy,
             "dac_capacity_factor": dac_capacity_factor,
             "curtailed_energy": curtailed_energy,
         }
 
     @staticmethod
-    def print_simulation_results(results: dict) -> None:
-        """Print simulation results in a formatted way."""
-        print(f"minimum storage is {results['minimum_storage']}")
-        print(f"DAC energy is {results['annual_dac_energy']}")
-        print(f"DAC Capacity Factor is {results['dac_capacity_factor']:.1%}")
-        print(f"Curtailed energy is {results['curtailed_energy']}")
+    def format_simulation_results(results: dict) -> str:
+        """Return simulation results in a formatted way."""
+        return (
+            f"minimum storage is {results['minimum_storage']:.1f}\n"
+            f"DAC energy is {results['annual_dac_energy']:.1f}\n"
+            f"DAC Capacity Factor is {results['dac_capacity_factor']:.1%}\n"
+            f"Curtailed energy is {results['curtailed_energy']:.1f}"
+        )
 
 
 # Example usage
@@ -232,7 +240,7 @@ if __name__ == "__main__":
     df = pd.read_csv("tests/rei_net_supply_df_12gw_nuclear.csv")
 
     # Example: Run simulation with required parameters for 250 GW renewable capacity
-    model = StorageModel(
+    model = PowerSystemModel(
         renewable_capacity=250 * U.GW,
         max_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,

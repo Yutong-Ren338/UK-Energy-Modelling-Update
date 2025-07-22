@@ -39,7 +39,7 @@ def test_seasonality_indices() -> None:
     electricity_seasonality = demand_model.seasonality_index(df_electricity, "demand", average_year=False)
     gas_seasonality = demand_model.seasonality_index(df_gas, "demand", average_year=False)
 
-    plt.figure(figsize=(10, 6))
+    plt.figure()
     plt.plot(gas_seasonality.index, gas_seasonality, label="Gas Seasonality Index")
     plt.plot(electricity_seasonality.index, electricity_seasonality, label="Electricity Seasonality Index")
     plt.xlabel("Day of Year")
@@ -69,7 +69,7 @@ def test_seasonality_indices_average_year() -> None:
     check(gas_seasonality.mean(), 1.0)
 
     # Create the plot artifact
-    plt.figure(figsize=(10, 6))
+    plt.figure()
     plt.plot(gas_seasonality.index, gas_seasonality, label="Gas Seasonality Index")
     plt.plot(electricity_seasonality.index, electricity_seasonality, label="Electricity Seasonality Index")
     plt.xlabel("Day of Year")
