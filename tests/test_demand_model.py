@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+import pytest
 from config import check
 
 from src import assumptions as A
@@ -109,11 +110,11 @@ def test_seasonal_demand_scaling_options() -> None:
     plt.close()
 
 
-def test_predicted_demand() -> None:
-    """Test the predicted demand for 2050."""
+@pytest.mark.parametrize("average_year", [True, False])
+def test_predicted_demand(*, average_year: bool) -> None:
     demands = {}
     for mode in ["naive", "seasonal", "cb7"]:
-        df = demand_model.predicted_demand(mode=mode, average_year=True)
+        df = demand_model.predicted_demand(mode=mode, average_year=average_year)
         assert isinstance(df, pd.DataFrame), f"Expected df for mode {mode}, got {type(df)}"
         assert not df.empty, f"Predicted demand for mode {mode} is empty"
         assert df.columns.tolist() == ["demand"], f"Predicted demand for mode {mode} has unexpected columns: {df.columns.tolist()}"
@@ -129,5 +130,5 @@ def test_predicted_demand() -> None:
     plt.xlabel("Day of Year")
     plt.ylabel("Electricity Demand (TWh)")
     plt.legend()
-    plt.savefig(OUTPUT_PATH / "predicted_demand_comparison_average_year.png")
+    plt.savefig(OUTPUT_PATH / f"predicted_demand_comparison_average_year_{average_year}.png")
     plt.close()

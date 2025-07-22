@@ -1,5 +1,6 @@
 from typing import Literal
 
+import numpy as np
 import pandas as pd
 
 from src import assumptions as A
@@ -96,6 +97,45 @@ def seasonal_demand_scaling(df: pd.DataFrame, *, old_gas_data: bool = False, fil
     return df_out[["demand"]]
 
 
+def map_years(historical_df: pd.DataFrame, predicted_df: pd.DataFrame) -> pd.DataFrame:
+    """Randomly map years from the historical DataFrame to the predicted DataFrame.
+
+    Used for CB7 deman data, where we have predicted 2050 demands for 3 weather years.
+    Mapping them randomly to historical years is better than taking an average and using that every year.
+
+    Args:
+        historical_df: DataFrame containing historical demand data with a datetime index.
+        predicted_df: DataFrame containing predicted demand data with a datetime index.
+
+    Returns:
+        DataFrame with the historical demand data mapped to the predicted years.
+    """
+    available_years = predicted_df.index.year.unique()
+    historical_years = historical_df.index.year.unique()
+
+    # map each historical year to a random choice from available years
+    mapping = np.random.default_rng().choice(available_years, len(historical_years))
+    historical_df["year"] = historical_df.index.year
+    historical_df["year"] = historical_df["year"].map(dict(zip(historical_years, mapping, strict=False)))
+
+    historical_df["day_of_year"] = historical_df.index.day_of_year
+    predicted_df["year"] = predicted_df.index.year
+    predicted_df["day_of_year"] = predicted_df.index.day_of_year
+
+    # merge on year and day
+    merged_df = (
+        historical_df.reset_index()
+        .merge(
+            predicted_df,
+            on=["year", "day_of_year"],
+            suffixes=("", "_predicted"),
+        )
+        .set_index("date")
+    )
+    merged_df = merged_df[["demand_predicted"]]
+    return merged_df.rename(columns={"demand_predicted": "demand"})
+
+
 def predicted_demand(
     mode: DemandMode = "naive",
     historical: HistoricalDemandSource = "era5",
@@ -131,5 +171,8 @@ def predicted_demand(
 
     if average_year:
         out = out.groupby(out.index.dayofyear).mean()
+    elif mode == "cb7":
+        # randomly match cb7 demand years to historical years
+        out = map_years(historical_df=df, predicted_df=out)
 
     return out

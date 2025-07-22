@@ -14,8 +14,8 @@
 
 - [ ] do better than averaging the gas demand (repeat it, or use a more sophisticated model)
 - [ ] look for updated version of ESPENI demand data
-- [ ] plug in different CCC demand scenarios
-- [ ] make it trivial to switch between seasonal, naive, and CCC demand models
+- [x] plug in CCC CB7 2050 demand scenarios
+- [x] make it trivial to switch between seasonal, naive, and CCC demand models
 - [ ] use heating degree days for an independent way to model seasonality
 
 ### Energy system modelling
