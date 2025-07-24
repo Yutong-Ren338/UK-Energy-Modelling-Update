@@ -70,3 +70,19 @@ def fraction_days_without_excess(net_supply_df: pd.DataFrame, *, return_mean: bo
     days_without_excess.name = "days_without_excess_generation"
 
     return days_without_excess
+
+
+def total_unmet_demand(net_supply_df: pd.DataFrame) -> pd.Series:
+    """Calculate the total unmet demand.
+
+    Args:
+        net_supply_df: DataFrame with renewable capacity as columns and daily net supply (supply - demand) as values.
+
+    Returns:
+        A series with renewable capacity as index and the total unmet demand as values.
+    """
+    unmet_demand = net_supply_df[net_supply_df < 0].sum(axis=0)
+    unmet_demand.index.name = "renewable_capacity_GW"
+    unmet_demand.name = "total_unmet_demand"
+
+    return unmet_demand

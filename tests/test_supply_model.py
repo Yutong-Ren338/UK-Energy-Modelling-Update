@@ -61,6 +61,30 @@ def test_fraction_days_without_excess_naive_demand() -> None:
     plt.close()
 
 
+def test_total_unmet_demand() -> None:
+    # now a version comparing naive and new demand scaling
+    demand_naive = demand_model.predicted_demand(mode="naive", historical="era5", average_year=False)
+    demand_seasonal = demand_model.predicted_demand(mode="seasonal", historical="era5", average_year=False)
+
+    A.Nuclear.Capacity = 12 * U.GW
+    naive_nuclear = supply_model.total_unmet_demand(supply_model.get_net_supply(demand_naive))
+    seasonal_nuclear = supply_model.total_unmet_demand(supply_model.get_net_supply(demand_seasonal))
+    A.Nuclear.Capacity = 0 * U.GW
+    naive_no_nuclear = supply_model.total_unmet_demand(supply_model.get_net_supply(demand_naive))
+    seasonal_no_nuclear = supply_model.total_unmet_demand(supply_model.get_net_supply(demand_seasonal))
+
+    plt.figure()
+    plt.plot(naive_nuclear.index.values, naive_nuclear, label="Naive 12 GW Nuclear")
+    plt.plot(naive_no_nuclear.index.values, naive_no_nuclear, label="Naive 0 GW Nuclear")
+    plt.plot(seasonal_nuclear.index.values, seasonal_nuclear, ls="--", label="Seasonal 12 GW Nuclear", color="blue")
+    plt.plot(seasonal_no_nuclear.index.values, seasonal_no_nuclear, ls="--", label="Seasonal 0 GW Nuclear", color="orange")
+    plt.xlabel("Renewable Capacity (GW)")
+    plt.ylabel("Total Unmet Demand (TWh)")
+    plt.legend()
+    plt.savefig(OUTPUT_PATH / "total_unmet_demand.png")
+    plt.close()
+
+
 def test_compare_supply_demand() -> None:
     # supply
     daily_capacity_factors = renewable_capacity_factors.get_renewable_capacity_factors(resample="D")
