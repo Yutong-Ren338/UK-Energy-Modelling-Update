@@ -119,3 +119,35 @@ def test_compare_supply_demand() -> None:
     plt.legend()
     plt.savefig(OUTPUT_PATH / "compare_supply_demand.png")
     plt.close()
+
+
+def test_unmet_demand_by_month() -> None:
+    # now a version comparing naive and new demand scaling
+    demand_naive = demand_model.predicted_demand(mode="naive", historical="era5", average_year=False)
+    demand_seasonal = demand_model.predicted_demand(mode="seasonal", historical="era5", average_year=False)
+    demand_cb7 = demand_model.predicted_demand(mode="cb7", historical="era5", average_year=False)
+
+    A.Nuclear.Capacity = 12 * U.GW
+
+    net_supply_naive = supply_model.get_net_supply(demand_naive)
+    net_supply_seasonal = supply_model.get_net_supply(demand_seasonal)
+    net_supply_cb7 = supply_model.get_net_supply(demand_cb7)
+
+    unmet_demand_naive = net_supply_naive[net_supply_naive < 0].abs()
+    unmet_demand_seasonal = net_supply_seasonal[net_supply_seasonal < 0].abs()
+    unmet_demand_cb7 = net_supply_cb7[net_supply_cb7 < 0].abs()
+
+    monthly_unmet_demand_naive = unmet_demand_naive.groupby(unmet_demand_naive.index.month).mean()
+    monthly_unmet_demand_seasonal = unmet_demand_seasonal.groupby(unmet_demand_seasonal.index.month).mean()
+    monthly_unmet_demand_cb7 = unmet_demand_cb7.groupby(unmet_demand_cb7.index.month).mean()
+
+    plt.figure()
+    plt.plot(monthly_unmet_demand_naive.index, monthly_unmet_demand_naive.mean(axis=1), label="Naive")
+    plt.plot(monthly_unmet_demand_seasonal.index, monthly_unmet_demand_seasonal.mean(axis=1), label="Seasonal")
+    plt.plot(monthly_unmet_demand_cb7.index, monthly_unmet_demand_cb7.mean(axis=1), label="CB7")
+
+    plt.xlabel("Month")
+    plt.ylabel("Average Daily Unmet Demand (TWh)")
+    plt.legend()
+    plt.savefig(OUTPUT_PATH / "unmet_demand_by_month.png")
+    plt.close()
