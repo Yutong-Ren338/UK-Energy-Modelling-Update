@@ -81,7 +81,7 @@ def total_unmet_demand(net_supply_df: pd.DataFrame) -> pd.Series:
     Returns:
         A series with renewable capacity as index and the total unmet demand as values.
     """
-    unmet_demand = net_supply_df[net_supply_df < 0].sum(axis=0)
+    unmet_demand = net_supply_df[net_supply_df < 0].sum(axis=0).abs()
     unmet_demand.index.name = "renewable_capacity_GW"
     unmet_demand.name = "total_unmet_demand"
 
