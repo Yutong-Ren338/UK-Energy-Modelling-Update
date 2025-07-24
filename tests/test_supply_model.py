@@ -68,7 +68,7 @@ def test_compare_supply_demand() -> None:
     supply_df["day_of_year"] = supply_df.index.dayofyear
     mean = supply_df.groupby("day_of_year").mean().astype(float)
     plt.figure(figsize=(10, 5))
-    plt.plot(mean.index, mean, label="Supply Seasonality Index")
+    plt.plot(mean.index, mean, label="Supply")
 
     # naive demand
     naive_df = demand_model.predicted_demand(mode="naive", average_year=True)
