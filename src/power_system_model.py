@@ -26,7 +26,7 @@ class SimulationParameters(NamedTuple):
     only_dac_if_storage_full: bool
 
 
-@numba.njit(cache=True, fastmath=True)
+@numba.njit(cache=True)
 def run_power_system_simulation_core(supply_demand_values: np.ndarray, params: SimulationParameters) -> np.ndarray:  # noqa: PLR0915
     """Core simulation function optimized for Numba JIT compilation.
 
