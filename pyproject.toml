@@ -15,7 +15,6 @@ dependencies = [
     "pint>=0.24.4",
     "pint-pandas>=0.7.1",
     "plotly>=6.2.0",
-    "rich>=14.0.0",
 ]
 
 [dependency-groups]
