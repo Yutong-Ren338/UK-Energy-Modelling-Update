@@ -40,6 +40,7 @@ def run_power_system_simulation_core(supply_demand_values: np.ndarray, params: S
     Returns:
         Array of shape (n_timesteps, 5) containing:
         [storage_level, residual_energy, dac_energy, curtailed_energy, stored_energy]
+        Returns array filled with NaN values if simulation fails (storage hits zero).
     """
     n_timesteps = len(supply_demand_values)
     results = np.zeros((n_timesteps, 5))
@@ -68,12 +69,12 @@ def run_power_system_simulation_core(supply_demand_values: np.ndarray, params: S
             # Energy shortage - draw from storage
             available_from_storage = prev_storage * e_out
             if supply_demand + available_from_storage <= 0:
-                # Not enough storage to meet demand - storage_level already 0
-                pass
-            else:
-                # Partial storage draw
-                energy_drawn = -supply_demand / e_out
-                storage_level = prev_storage - energy_drawn
+                # Not enough storage to meet demand - simulation failed
+                results[:] = np.nan
+                return results
+            # Partial storage draw
+            energy_drawn = -supply_demand / e_out
+            storage_level = prev_storage - energy_drawn
         elif storage_first:
             # Energy surplus with storage-first strategy
             energy_available_for_electrolyser = min(supply_demand, max_electrolyser)
@@ -183,7 +184,7 @@ class PowerSystemModel:
         self.dac_max_daily_energy = (dac_capacity * A.HoursPerDay).to(U.TWh).magnitude
         self.only_dac_if_storage_full = only_dac_if_storage_full
 
-    def run_simulation(self, net_supply_df: pd.DataFrame) -> pd.DataFrame:
+    def run_simulation(self, net_supply_df: pd.DataFrame) -> pd.DataFrame | None:
         """Run power system simulation for this renewable capacity scenario.
 
         Uses the core simulation function for optimized processing.
@@ -192,7 +193,8 @@ class PowerSystemModel:
             net_supply_df: DataFrame containing supply-demand data.
 
         Returns:
-            DataFrame with simulation results added as new columns.
+            DataFrame with simulation results added as new columns, or None if
+            simulation failed (storage capacity insufficient to meet demand).
         """
         # Create a copy to avoid modifying the original DataFrame
         df = net_supply_df.copy()
@@ -227,6 +229,10 @@ class PowerSystemModel:
         # Run the core simulation
         results = run_power_system_simulation_core(supply_demand_values, params)
 
+        # Check if simulation failed (storage hit zero)
+        if np.isnan(results).any():
+            return None
+
         # Assign results back to DataFrame with proper units
         df[columns.storage_level] = pd.Series(results[:, 0], dtype="pint[TWh]")
         df[columns.residual_energy] = pd.Series(results[:, 1], dtype="pint[TWh]")
@@ -247,15 +253,19 @@ class PowerSystemModel:
         assert (df[columns.dac_energy] <= self.dac_max_daily_energy * U.TWh).all(), "DAC energy cannot exceed its maximum daily capacity"
         assert (df[columns.storage_level] >= 0).all(), "Storage levels cannot be negative"
 
-    def analyze_simulation_results(self, net_supply_df: pd.DataFrame) -> dict:
+    def analyze_simulation_results(self, net_supply_df: pd.DataFrame) -> dict | None:
         """Analyze simulation results and return key metrics.
 
         Args:
             net_supply_df: DataFrame containing simulation results.
 
         Returns:
-            Dictionary containing analysis metrics.
+            Dictionary containing analysis metrics, or None if simulation failed.
         """
+        # Check if this is a failed simulation (None DataFrame)
+        if net_supply_df is None:
+            return None
+
         # Define column names
         storage_column = f"storage_level (TWh),RC={int(self.renewable_capacity)}GW"
         dac_column = f"dac_energy (TWh),RC={int(self.renewable_capacity)}GW"
@@ -285,24 +295,33 @@ class PowerSystemModel:
             f"Curtailed energy is {results['curtailed_energy']:.1f}"
         )
 
-    def print_simulation_results(self, results: dict) -> None:
+    def print_simulation_results(self, results: dict | None) -> None:
         """Print simulation results in a formatted way.
 
         Args:
-            results: Dictionary containing analysis metrics from analyze_simulation_results.
+            results: Dictionary containing analysis metrics from analyze_simulation_results,
+                    or None if simulation failed.
         """
-        print(self.format_simulation_results(results))
+        if results is None:
+            print("Simulation failed: insufficient storage capacity to meet demand")
+        else:
+            print(self.format_simulation_results(results))
 
-    def plot_simulation_results(self, net_supply_df: pd.DataFrame, results: dict, demand_mode: str, fname: str | None = None) -> None:
+    def plot_simulation_results(self, net_supply_df: pd.DataFrame | None, results: dict | None, demand_mode: str, fname: str | None = None) -> None:
         """Plot simulation results showing storage levels and energy flows.
 
         Args:
-            net_supply_df: DataFrame containing simulation results.
-            results: Dictionary containing analysis metrics from analyze_simulation_results.
+            net_supply_df: DataFrame containing simulation results, or None if simulation failed.
+            results: Dictionary containing analysis metrics from analyze_simulation_results,
+                    or None if simulation failed.
             demand_mode: Label for the demand scenario.
             fname: Optional filename to save the plot.
 
         """
+        if net_supply_df is None or results is None:
+            print(f"Cannot plot results: simulation failed for {demand_mode} demand scenario")
+            return
+
         fig = plt.figure(figsize=(15, 6))
 
         # Create gridspec: 2 rows, 4 columns (3 for left plots, 1 for right text)
