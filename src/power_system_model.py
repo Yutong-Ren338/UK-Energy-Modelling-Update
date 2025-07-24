@@ -1,7 +1,9 @@
 from typing import NamedTuple
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib import gridspec
 
 import src.assumptions as A
 from src.units import Units as U
@@ -234,18 +236,62 @@ class PowerSystemModel:
             f"Curtailed energy is {results['curtailed_energy']:.1f}"
         )
 
+    def print_simulation_results(self, results: dict) -> None:
+        """Print simulation results in a formatted way.
 
-# Example usage
-if __name__ == "__main__":
-    df = pd.read_csv("tests/rei_net_supply_df_12gw_nuclear.csv")
+        Args:
+            results: Dictionary containing analysis metrics from analyze_simulation_results.
+        """
+        print(self.format_simulation_results(results))
 
-    # Example: Run simulation with required parameters for 250 GW renewable capacity
-    model = PowerSystemModel(
-        renewable_capacity=250 * U.GW,
-        max_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
-        electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
-        dac_capacity=A.DAC.Capacity,
-    )
-    net_supply_df = model.run_simulation(df)
-    results = model.analyze_simulation_results(net_supply_df)
-    model.print_simulation_results(results)
+    def plot_simulation_results(self, net_supply_df: pd.DataFrame, results: dict, demand_mode: str, fname: str | None = None) -> None:
+        """Plot simulation results showing storage levels and energy flows.
+
+        Args:
+            net_supply_df: DataFrame containing simulation results.
+            results: Dictionary containing analysis metrics from analyze_simulation_results.
+            demand_mode: Label for the demand scenario.
+            fname: Optional filename to save the plot.
+
+        """
+        fig = plt.figure(figsize=(15, 6))
+
+        # Create gridspec: 2 rows, 4 columns (3 for left plots, 1 for right text)
+        gs = gridspec.GridSpec(2, 4, figure=fig, hspace=0.0, wspace=0.1)
+
+        # Left plots take first 3 columns
+        ax1 = fig.add_subplot(gs[0, :3])
+        ax1.plot(net_supply_df[f"storage_level (TWh),RC={self.renewable_capacity}GW"], color="green", linewidth=0.5, label="Energy in Storage")
+        ax1.axhline(self.max_storage_capacity, linestyle="--", color="red", linewidth=1.5, label="Maximum Storage Capacity")
+        ax1.axhline(20, linestyle="--", color="blue", linewidth=1.5, label="Contingency Storage")
+        ax1.set_ylim(0, self.max_storage_capacity * 1.1)
+        ax1.set_ylabel("Storage Level (TWh)")
+        ax1.legend(loc="upper right", fontsize=10, facecolor="white", edgecolor="gray", frameon=True, framealpha=0.9)
+        ax2 = fig.add_subplot(gs[1, :3])
+        ax2.plot(net_supply_df[f"stored_energy (TWh),RC={self.renewable_capacity}GW"], color="green", linewidth=0.5, label="Stored Energy")
+        ax2.plot(net_supply_df[f"curtailed_energy (TWh),RC={self.renewable_capacity}GW"], color="black", linewidth=0.5, label="Curtailed Energy")
+        ax2.plot(net_supply_df[f"dac_energy (TWh),RC={self.renewable_capacity}GW"], color="red", linewidth=0.5, label="DAC Energy")
+        ax2.set_xlabel("Day in 40 Years")
+        ax2.set_ylabel("Energy (TWh)")
+        ax2.legend(loc="upper right", fontsize=10, facecolor="white", edgecolor="gray", frameon=True, framealpha=0.9)
+
+        # Text subplot spans both rows in the rightmost column
+        ax3 = fig.add_subplot(gs[:, 3])
+        ax3.axis("off")
+
+        # Create formatted text with parameters and results
+        text = (
+            f"Parameters:\n"
+            f"• Demand Mode: {demand_mode}\n"
+            f"• Renewable Capacity: {self.renewable_capacity:.0f} GW\n"
+            f"• Storage Capacity: {self.max_storage_capacity:.0f} TWh\n"
+            f"• DAC Capacity: {self.dac_capacity:.0f} GW\n"
+            f"• Electrolyser Power: {self.electrolyser_power:.0f} GW\n\n"
+            f"Results:\n"
+            f"{self.format_simulation_results(results)}"
+        )
+
+        ax3.text(0, 0.5, text, fontsize=11, verticalalignment="center", fontfamily="monospace")
+
+        if fname:
+            fig.savefig(fname, bbox_inches="tight", dpi=300)

@@ -7,9 +7,13 @@ import pytest
 from pint import Quantity
 
 import src.assumptions as A
+from src import demand_model, supply_model
 from src.power_system_model import PowerSystemModel
 from src.units import Units as U
-from tests.config import check
+from tests.config import OUTPUT_DIR, check
+
+OUTPUT_PATH = OUTPUT_DIR / "power_system_model"
+OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 
 SIMULATION_KWARGS = {
     "renewable_capacity": 250 * U.GW,  # Default renewable capacity for the simulation
@@ -154,3 +158,45 @@ def test_multiple_renewable_capacities(sample_data: pd.DataFrame) -> None:
 
     # Verify that different capacities produce different results
     assert len({r["minimum_storage"] for r in all_results.values()}) > 1, "Different capacities should produce different results"
+
+
+@pytest.mark.parametrize("demand_mode", ["naive", "seasonal", "cb7"])
+def test_plot_simulation_results(demand_mode: str) -> None:
+    """Test plotting simulation results for different demand modes."""
+    # Setup test parameters
+    renewable_capacity = 350
+
+    # Generate demand and supply data
+    demand_df = demand_model.predicted_demand(mode=demand_mode, average_year=False)
+    df = supply_model.get_net_supply(demand_df).reset_index()
+
+    # Create power system model
+    storage = PowerSystemModel(
+        renewable_capacity=renewable_capacity * U.GW,
+        max_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
+        electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
+        dac_capacity=A.DAC.Capacity,
+    )
+
+    # Run simulation
+    sim_df = storage.run_simulation(df)
+    results = storage.analyze_simulation_results(sim_df)
+
+    # Create output directory for simulation runs
+    simulation_outdir = OUTPUT_PATH / "simulation_runs"
+    simulation_outdir.mkdir(exist_ok=True)
+
+    # Generate plot filename
+    plot_filename = simulation_outdir / f"simulation_results_{demand_mode}_{renewable_capacity}GW.png"
+
+    # Generate plot
+    storage.plot_simulation_results(sim_df, results, demand_mode, fname=str(plot_filename))
+
+    # Verify plot was created
+    assert plot_filename.exists(), f"Plot file {plot_filename} was not created"
+
+    # Verify results are reasonable
+    assert results["minimum_storage"] >= 0 * U.TWh
+    assert results["annual_dac_energy"] >= 0 * U.TWh
+    assert 0 <= results["dac_capacity_factor"] <= 1
+    assert results["curtailed_energy"] >= 0 * U.TWh
