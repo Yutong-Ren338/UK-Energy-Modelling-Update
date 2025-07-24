@@ -1,7 +1,9 @@
 """Tests for the power system model simulation."""
 
+import time
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 from pint import Quantity
@@ -200,3 +202,55 @@ def test_plot_simulation_results(demand_mode: str) -> None:
     assert results["annual_dac_energy"] >= 0 * U.TWh
     assert 0 <= results["dac_capacity_factor"] <= 1
     assert results["curtailed_energy"] >= 0 * U.TWh
+
+
+def test_simulation_timing() -> None:
+    """Time the power system simulation to measure performance across different parameter combinations."""
+    demand_mode = "seasonal"  # Use seasonal mode for timing test
+
+    # Generate demand and supply data once
+    demand_df = demand_model.predicted_demand(mode=demand_mode, average_year=False)
+    df = supply_model.get_net_supply(demand_df).reset_index()
+
+    # Use the realistic parameter ranges as specified
+    renewable_capacities = range(200, 410, 20)
+    electrolyser_powers = range(20, 110, 20)
+    max_storage = range(10, 60, 10)
+
+    timing_results = []
+    total_combinations = len(renewable_capacities) * len(electrolyser_powers) * len(max_storage)
+    print(f"\nTesting {total_combinations} parameter combinations...")
+
+    for renewable_capacity in renewable_capacities:
+        for electrolyser_power in electrolyser_powers:
+            for storage in max_storage:
+                model = PowerSystemModel(
+                    renewable_capacity=renewable_capacity * U.GW,
+                    max_storage_capacity=storage * U.TWh,
+                    electrolyser_power=electrolyser_power * U.GW,
+                    dac_capacity=A.DAC.Capacity,
+                )
+
+                start_time = time.time()
+                model.run_simulation(df.copy())
+                end_time = time.time()
+                timing_results.append(end_time - start_time)
+
+    # Calculate timing statistics
+    mean_time = np.mean(timing_results)
+    std_time = np.std(timing_results)
+    total_time = np.sum(timing_results)
+
+    print(f"\nPower System Simulation Timing Results ({len(timing_results)} combinations):")
+    print(f"Total execution time: {total_time:.2f} seconds")
+    print(f"Mean execution time: {mean_time:.4f} seconds")
+    print(f"Standard deviation: {std_time:.4f} seconds")
+    print(f"Min time: {np.min(timing_results):.4f} seconds")
+    print(f"Max time: {np.max(timing_results):.4f} seconds")
+
+    # Basic sanity checks
+    max_reasonable_time = 1  # seconds per simulation
+    max_total_test_time = 30  # seconds for entire test
+
+    assert mean_time < max_reasonable_time, f"Simulation taking too long: {mean_time:.2f} seconds on average"
+    assert total_time < max_total_test_time, f"Total test time too long: {total_time:.2f} seconds"

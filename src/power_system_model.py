@@ -267,6 +267,7 @@ class PowerSystemModel:
         ax1.set_ylim(0, self.max_storage_capacity * 1.1)
         ax1.set_ylabel("Storage Level (TWh)")
         ax1.legend(loc="upper right", fontsize=10, facecolor="white", edgecolor="gray", frameon=True, framealpha=0.9)
+
         ax2 = fig.add_subplot(gs[1, :3])
         ax2.plot(net_supply_df[f"stored_energy (TWh),RC={self.renewable_capacity}GW"], color="green", linewidth=0.5, label="Stored Energy")
         ax2.plot(net_supply_df[f"curtailed_energy (TWh),RC={self.renewable_capacity}GW"], color="black", linewidth=0.5, label="Curtailed Energy")
