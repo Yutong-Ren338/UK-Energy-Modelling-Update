@@ -213,8 +213,8 @@ def test_simulation_timing() -> None:
     df = supply_model.get_net_supply(demand_df).reset_index()
 
     # Use the realistic parameter ranges as specified
-    renewable_capacities = range(200, 410, 20)
-    electrolyser_powers = range(20, 110, 20)
+    renewable_capacities = range(200, 410, 10)
+    electrolyser_powers = range(20, 110, 10)
     max_storage = range(10, 60, 10)
 
     timing_results = []
