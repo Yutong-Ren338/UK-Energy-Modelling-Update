@@ -8,9 +8,8 @@ This model simulates the UK's future energy system using hourly/daily time serie
 
 - **Renewable energy generation** from wind and solar with realistic ERA5-based capacity factors from Renewables.ninja
 - **Multiple demand scenarios**: Switch between naive scaling, seasonal patterns with heat pump electrification, and CCC CB7 2050 projections
-- **Energy storage systems** with configurable battery capacity and round-trip efficiency losses
+- **Energy storage systems** with configurable capacity and round-trip efficiency losses
 - **Direct Air Capture (DAC)** integration for CO2 removal using excess renewable energy
-- **Energy system balance** including curtailment, storage dynamics, and demand response
 - **Economic analysis**: Cost modeling and optimization capabilities (in development)
 
 ## Getting Started
