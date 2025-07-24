@@ -50,7 +50,7 @@ def test_total_demand_2050() -> None:
     assert str(result.units) == "terawatt_hour", f"Result should have TWh units, got {result.units}"
 
     # Use check function for float comparison
-    check(result, 682.395)
+    check(result, EXPECTED_TOTAL_DEMAND)
 
     # Check that the result is positive
     assert result > 0, f"Result should be positive, got {result}"
