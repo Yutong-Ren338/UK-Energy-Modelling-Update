@@ -16,7 +16,7 @@ HoursPerYear = HoursPerDay * 365.25  # Including leap years
 # ============================================================================
 
 # EnergyDemand2050 = 575 * U.TWh  # UK energy demand target for 2050 from Rei's thesis # noqa: ERA001
-CB7EnergyDemand2050 = 682.39 * U.TWh  # Seventh Carbon Budget energy demand target for 2050
+CB7EnergyDemand2050 = 692 * U.TWh  # Seventh Carbon Budget energy demand target for 2050
 EnergyDemand2050 = CB7EnergyDemand2050
 CB7EnergyDemand2050Buildings = 355.44 * U.TWh  # Seventh Carbon Budget energy demand for buildings in 2050
 CB7FractionHeatDemandBuildings = 0.597  # Fraction of energy demand from buildings that is for heating in 2050
@@ -148,7 +148,7 @@ class HydrogenStorage:
 
         # Source: IEA via RS report
 
-        Power = 50 * U.GW  # Electrolyser power capacity
+        Power = 50 * U.GW  # Electrolyser power capacity (CB7 has 20 GW)
         Efficiency = 0.74  # Converting electrical energy to hydrogen
         Capex = 450 / GBPToUSD * U.GBP / U.kW
         Opex = Capex * 0.015
@@ -162,7 +162,7 @@ class HydrogenStorage:
         # For Capex, H21 NOE assumes £325M for 1.22 TWh. CS Smith et al (2023)
         # take the midpoint of 1-2x this number, which is £399.59M per TWh.
 
-        MaxCapacity = 71.0 * U.TWh  # Maximum storage capacity
+        MaxCapacity = 71.0 * U.TWh  # Maximum storage capacity (CB7 has 5-9 TWh)
         Efficiency = 0.407  # Round-trip efficiency (electrolysis * generation efficiencies
         Capex = 400 * U.GBP / U.MWh
         Opex = Capex * 0.015
