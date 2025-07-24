@@ -3,6 +3,7 @@ from pint import Quantity
 
 import src.assumptions as A
 from src.data import cb7
+from src.units import Units as U
 from tests.config import check
 
 EXPECTED_FRACTION = A.CB7FractionHeatDemandBuildings
@@ -11,7 +12,7 @@ EXPECTED_BUILDINGS_DEMAND = A.CB7EnergyDemand2050Buildings
 # In the report, 692 TWh is stated as the total electricity demand for 2050.A
 # We use that in the modelling assumptions, for the test of the data integrity use the derived value
 # Atl some point should understand the discrepancy (probably we are not processing the data correctly)
-EXPECTED_TOTAL_DEMAND = 682.395
+EXPECTED_TOTAL_DEMAND = 682.395 * U.TWh
 
 
 def test_frac_heat_demand_from_buildings() -> None:
