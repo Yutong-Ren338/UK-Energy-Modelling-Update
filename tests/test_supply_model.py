@@ -66,12 +66,16 @@ def test_total_unmet_demand() -> None:
     demand_naive = demand_model.predicted_demand(mode="naive", historical="era5", average_year=False)
     demand_seasonal = demand_model.predicted_demand(mode="seasonal", historical="era5", average_year=False)
 
+original_capacity = A.Nuclear.Capacity
+try:
     A.Nuclear.Capacity = 12 * U.GW
     naive_nuclear = supply_model.total_unmet_demand(supply_model.get_net_supply(demand_naive))
     seasonal_nuclear = supply_model.total_unmet_demand(supply_model.get_net_supply(demand_seasonal))
     A.Nuclear.Capacity = 0 * U.GW
     naive_no_nuclear = supply_model.total_unmet_demand(supply_model.get_net_supply(demand_naive))
     seasonal_no_nuclear = supply_model.total_unmet_demand(supply_model.get_net_supply(demand_seasonal))
+finally:
+    A.Nuclear.Capacity = original_capacity
 
     plt.figure()
     plt.plot(naive_nuclear.index.values, naive_nuclear, label="Naive 12 GW Nuclear")
