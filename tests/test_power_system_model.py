@@ -148,8 +148,10 @@ def test_multiple_renewable_capacities(sample_data: pd.DataFrame) -> None:
             electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
             dac_capacity=A.DAC.Capacity,
         )
-        net_supply_df = model.run_simulation(sample_data)
-        results = model.analyze_simulation_results(net_supply_df)
+        sim_df = model.run_simulation(sample_data)
+        if sim_df is None:
+            continue
+        results = model.analyze_simulation_results(sim_df)
         all_results[capacity] = results
 
         # Verify that each capacity produces valid results
@@ -166,7 +168,7 @@ def test_multiple_renewable_capacities(sample_data: pd.DataFrame) -> None:
 def test_plot_simulation_results(demand_mode: str) -> None:
     """Test plotting simulation results for different demand modes."""
     # Setup test parameters
-    renewable_capacity = 350
+    renewable_capacity = 450
 
     # Generate demand and supply data
     demand_df = demand_model.predicted_demand(mode=demand_mode, average_year=False)

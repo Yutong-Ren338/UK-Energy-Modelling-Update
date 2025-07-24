@@ -253,17 +253,17 @@ class PowerSystemModel:
         assert (df[columns.dac_energy] <= self.dac_max_daily_energy * U.TWh).all(), "DAC energy cannot exceed its maximum daily capacity"
         assert (df[columns.storage_level] >= 0).all(), "Storage levels cannot be negative"
 
-    def analyze_simulation_results(self, net_supply_df: pd.DataFrame) -> dict | None:
+    def analyze_simulation_results(self, sim_df: pd.DataFrame) -> dict | None:
         """Analyze simulation results and return key metrics.
 
         Args:
-            net_supply_df: DataFrame containing simulation results.
+            sim_df: DataFrame containing simulation results.
 
         Returns:
             Dictionary containing analysis metrics, or None if simulation failed.
         """
         # Check if this is a failed simulation (None DataFrame)
-        if net_supply_df is None:
+        if sim_df is None:
             return None
 
         # Define column names
@@ -272,11 +272,11 @@ class PowerSystemModel:
         unused_column = f"curtailed_energy (TWh),RC={int(self.renewable_capacity)}GW"
 
         # Calculate key metrics
-        minimum_storage = net_supply_df[storage_column].min()
-        annual_dac_energy = net_supply_df[dac_column].mean() * 365
+        minimum_storage = sim_df[storage_column].min()
+        annual_dac_energy = sim_df[dac_column].mean() * 365
         # Calculate capacity factor as actual usage vs maximum possible daily energy
-        dac_capacity_factor = (net_supply_df[dac_column] > 0).mean()  # Simplified calculation based on operating days
-        curtailed_energy = net_supply_df[unused_column].mean() * 365
+        dac_capacity_factor = (sim_df[dac_column] > 0).mean()  # Simplified calculation based on operating days
+        curtailed_energy = sim_df[unused_column].mean() * 365
 
         return {
             "minimum_storage": minimum_storage,
@@ -307,18 +307,18 @@ class PowerSystemModel:
         else:
             print(self.format_simulation_results(results))
 
-    def plot_simulation_results(self, net_supply_df: pd.DataFrame | None, results: dict | None, demand_mode: str, fname: str | None = None) -> None:
+    def plot_simulation_results(self, sim_df: pd.DataFrame | None, results: dict | None, demand_mode: str, fname: str | None = None) -> None:
         """Plot simulation results showing storage levels and energy flows.
 
         Args:
-            net_supply_df: DataFrame containing simulation results, or None if simulation failed.
+            sim_df: DataFrame containing simulation results, or None if simulation failed.
             results: Dictionary containing analysis metrics from analyze_simulation_results,
                     or None if simulation failed.
             demand_mode: Label for the demand scenario.
             fname: Optional filename to save the plot.
 
         """
-        if net_supply_df is None or results is None:
+        if sim_df is None or results is None:
             print(f"Cannot plot results: simulation failed for {demand_mode} demand scenario")
             return
 
@@ -329,7 +329,7 @@ class PowerSystemModel:
 
         # Left plots take first 3 columns
         ax1 = fig.add_subplot(gs[0, :3])
-        ax1.plot(net_supply_df[f"storage_level (TWh),RC={self.renewable_capacity}GW"], color="green", linewidth=0.5, label="Energy in Storage")
+        ax1.plot(sim_df[f"storage_level (TWh),RC={self.renewable_capacity}GW"], color="green", linewidth=0.5, label="Energy in Storage")
         ax1.axhline(self.max_storage_capacity, linestyle="--", color="red", linewidth=1.5, label="Maximum Storage Capacity")
         ax1.axhline(20, linestyle="--", color="blue", linewidth=1.5, label="Contingency Storage")
         ax1.set_ylim(0, self.max_storage_capacity * 1.1)
@@ -337,9 +337,9 @@ class PowerSystemModel:
         ax1.legend(loc="upper right", fontsize=10, facecolor="white", edgecolor="gray", frameon=True, framealpha=0.9)
 
         ax2 = fig.add_subplot(gs[1, :3])
-        ax2.plot(net_supply_df[f"stored_energy (TWh),RC={self.renewable_capacity}GW"], color="green", linewidth=0.5, label="Stored Energy")
-        ax2.plot(net_supply_df[f"curtailed_energy (TWh),RC={self.renewable_capacity}GW"], color="black", linewidth=0.5, label="Curtailed Energy")
-        ax2.plot(net_supply_df[f"dac_energy (TWh),RC={self.renewable_capacity}GW"], color="red", linewidth=0.5, label="DAC Energy")
+        ax2.plot(sim_df[f"stored_energy (TWh),RC={self.renewable_capacity}GW"], color="green", linewidth=0.5, label="Stored Energy")
+        ax2.plot(sim_df[f"curtailed_energy (TWh),RC={self.renewable_capacity}GW"], color="black", linewidth=0.5, label="Curtailed Energy")
+        ax2.plot(sim_df[f"dac_energy (TWh),RC={self.renewable_capacity}GW"], color="red", linewidth=0.5, label="DAC Energy")
         ax2.set_xlabel("Day in 40 Years")
         ax2.set_ylabel("Energy (TWh)")
         ax2.legend(loc="upper right", fontsize=10, facecolor="white", edgecolor="gray", frameon=True, framealpha=0.9)
