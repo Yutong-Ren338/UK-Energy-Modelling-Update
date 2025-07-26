@@ -89,29 +89,6 @@ class Renewables:
 
 
 # ============================================================================
-# DIRECT AIR CAPTURE (DAC)
-# ============================================================================
-
-
-class DAC:
-    """Parameters for Direct Air Capture technology."""
-
-    # System capacity parameters
-    Capacity = 27.0 * U.GW
-
-    CarbonStorage = 7.5  # GBP/tonne CO2
-
-    class EnergyCost:
-        """Energy requirements for DAC processes."""
-
-        Low = 43 * U.kJ / U.mol
-        Medium = 101 * U.kJ / U.mol
-        High = 162 * U.kJ / U.mol
-
-        LowTWhPerMt = convert_energy_cost(Low, MolecularWeightCO2)
-
-
-# ============================================================================
 # NUCLEAR POWER
 # ============================================================================
 
@@ -186,6 +163,29 @@ class HydrogenStorage:
         Lifetime = 30  # years
 
         AnnualisedCost = annualised_cost(Capex, Opex, Lifetime, DiscountRate)
+
+
+# ============================================================================
+# DIRECT AIR CAPTURE (DAC)
+# ============================================================================
+
+
+class DAC:
+    """Parameters for Direct Air Capture technology."""
+
+    # System capacity parameters
+    Capacity = 27.0 * U.GW
+
+    CarbonStorage = 7.5  # GBP/tonne CO2
+
+    class EnergyCost:
+        """Energy requirements for DAC processes."""
+
+        Low = 43 * U.kJ / U.mol
+        Medium = 101 * U.kJ / U.mol
+        High = 162 * U.kJ / U.mol
+
+        LowTWhPerMt = convert_energy_cost(Low, MolecularWeightCO2)
 
 
 # ============================================================================
