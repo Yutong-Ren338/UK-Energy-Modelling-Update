@@ -26,14 +26,14 @@ class SimulationParameters(NamedTuple):
 
 @numba.njit(cache=True)
 def handle_deficit(
-    supply_demand: float,
+    net_supply: float,
     prev_hydrogen_storage: float,
     hydrogen_e_out: float,
 ) -> tuple[float, bool]:
     """Handle energy deficit scenario by drawing from storage.
 
     Args:
-        supply_demand: Negative supply-demand value (deficit)
+        net_supply: Negative supply-demand value (deficit)
         prev_hydrogen_storage: Previous hydrogen storage level
         hydrogen_e_out: Hydrogen storage output efficiency
 
@@ -41,19 +41,19 @@ def handle_deficit(
         Tuple of (new_hydrogen_storage_level, simulation_failed)
     """
     available_from_storage = prev_hydrogen_storage * hydrogen_e_out
-    if supply_demand + available_from_storage <= 0:
+    if net_supply + available_from_storage <= 0:
         # Not enough storage to meet demand - simulation failed
         return 0.0, True
 
     # Partial storage draw
-    energy_drawn = -supply_demand / hydrogen_e_out
+    energy_drawn = -net_supply / hydrogen_e_out
     hydrogen_storage_level = prev_hydrogen_storage - energy_drawn
     return hydrogen_storage_level, False
 
 
 @numba.njit(cache=True)
 def handle_surplus(
-    supply_demand: float,
+    net_supply: float,
     prev_hydrogen_storage: float,
     max_hydrogen_storage: float,
     max_electrolyser: float,
@@ -63,7 +63,7 @@ def handle_surplus(
     """Handle energy surplus with either storage-first or balanced allocation strategy.
 
     Args:
-        supply_demand: Positive supply-demand value (surplus)
+        net_supply: Positive supply-demand value (surplus)
         prev_hydrogen_storage: Previous hydrogen storage level
         max_hydrogen_storage: Maximum hydrogen storage capacity
         max_electrolyser: Maximum electrolyser daily energy
@@ -74,7 +74,7 @@ def handle_surplus(
     Returns:
         Tuple of (hydrogen_storage_level, residual_energy, stored_energy)
     """
-    energy_available_for_electrolyser = min(supply_demand, max_electrolyser)
+    energy_available_for_electrolyser = min(net_supply, max_electrolyser)
     energy_to_store = energy_available_for_electrolyser * hydrogen_e_in
     hydrogen_storage_space_available = max_hydrogen_storage - prev_hydrogen_storage
 
@@ -88,14 +88,14 @@ def handle_surplus(
         else:
             # Storage gets filled, excess energy available for DAC
             energy_used_for_storage = hydrogen_storage_space_available / hydrogen_e_in
-            residual_energy = supply_demand - energy_used_for_storage
+            residual_energy = net_supply - energy_used_for_storage
             hydrogen_storage_level = max_hydrogen_storage
             stored_energy = energy_used_for_storage
     else:
         # Balanced strategy: store what fits, residual goes to DAC
         new_hydrogen_storage_level = min(prev_hydrogen_storage + energy_to_store, max_hydrogen_storage)
         actual_energy_stored = (new_hydrogen_storage_level - prev_hydrogen_storage) / hydrogen_e_in
-        residual_energy = supply_demand - actual_energy_stored
+        residual_energy = net_supply - actual_energy_stored
 
         # Fix small negative values due to floating point precision errors
         # But preserve larger negative values that indicate actual logic errors
@@ -109,14 +109,14 @@ def handle_surplus(
 
 
 @numba.njit(cache=True)
-def simulate_power_system_core(supply_demand_values: np.ndarray, params: SimulationParameters) -> np.ndarray:
+def simulate_power_system_core(net_supply_values: np.ndarray, params: SimulationParameters) -> np.ndarray:
     """Core simulation function optimized for Numba JIT compilation.
 
     Uses smaller specialized functions for different scenarios to improve readability
     while maintaining JIT performance.
 
     Args:
-        supply_demand_values: Array of supply-demand values for each timestep
+        net_supply_values: Array of supply-demand values for each timestep
         params: Simulation parameters
 
     Returns:
@@ -124,7 +124,7 @@ def simulate_power_system_core(supply_demand_values: np.ndarray, params: Simulat
         [hydrogen_storage_level, residual_energy, dac_energy, curtailed_energy, stored_energy]
         Returns array filled with NaN values if simulation fails (storage hits zero).
     """
-    n_timesteps = len(supply_demand_values)
+    n_timesteps = len(net_supply_values)
     results = np.zeros((n_timesteps, 5))
 
     # Extract ALL parameters to local variables
@@ -138,34 +138,27 @@ def simulate_power_system_core(supply_demand_values: np.ndarray, params: Simulat
     prev_hydrogen_storage = params.initial_hydrogen_storage_level
 
     for i in range(n_timesteps):
-        supply_demand = supply_demand_values[i]
+        net_supply = net_supply_values[i]
 
-        if supply_demand <= 0:
+        if net_supply <= 0:
             # Energy shortage - draw from storage
-            hydrogen_storage_level, simulation_failed = handle_deficit(supply_demand, prev_hydrogen_storage, hydrogen_e_out)
+            hydrogen_storage_level, simulation_failed = handle_deficit(net_supply, prev_hydrogen_storage, hydrogen_e_out)
             if simulation_failed:
                 results[:] = np.nan
                 return results
 
-            # Deficit scenario - no residual energy, DAC, curtailment, or storage
-            residual_energy = 0.0
-            dac_energy = 0.0
-            curtailed_energy = 0.0
-            stored_energy = 0.0
+            # Deficit scenario - all other values are zero
+            residual_energy = dac_energy = curtailed_energy = stored_energy = 0.0
 
-        elif supply_demand > 0:
+        else:
             # Energy surplus - use unified handler for both strategies
             hydrogen_storage_level, residual_energy, stored_energy = handle_surplus(
-                supply_demand, prev_hydrogen_storage, max_hydrogen_storage, max_electrolyser, hydrogen_e_in, only_dac_if_storage_full
+                net_supply, prev_hydrogen_storage, max_hydrogen_storage, max_electrolyser, hydrogen_e_in, only_dac_if_storage_full
             )
 
             # Handle DAC allocation for residual energy
-            if residual_energy > 0:
-                dac_energy = min(residual_energy, max_dac)
-                curtailed_energy = residual_energy - dac_energy
-            else:
-                dac_energy = 0.0
-                curtailed_energy = 0.0
+            dac_energy = min(residual_energy, max_dac) if residual_energy > 0 else 0.0
+            curtailed_energy = max(0.0, residual_energy - dac_energy)
 
         # Direct array assignment is faster than list creation
         results[i, 0] = hydrogen_storage_level
