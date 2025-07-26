@@ -141,10 +141,10 @@ class PowerSystem:
         assert (df[columns.residual_energy] >= 0).all(), "Residual energy cannot be negative"
         assert (df[columns.curtailed_energy] >= 0).all(), "Unused energy cannot be negative"
         assert (df[columns.hydrogen_storage_level] <= self.max_hydrogen_storage_capacity * U.TWh).all(), (
-            "Hydrogen storage levels cannot exceed maximum capacity"
+            "Hydrogen storage cannot exceed maximum capacity"
         )
         assert (df[columns.dac_energy] <= self.dac_max_daily_energy * U.TWh).all(), "DAC energy cannot exceed its maximum daily capacity"
-        assert (df[columns.hydrogen_storage_level] >= 0).all(), "Hydrogen storage levels cannot be negative"
+        assert (df[columns.hydrogen_storage_level] >= 0).all(), "Hydrogen storage cannot be negative"
 
     def analyze_simulation_results(self, sim_df: pd.DataFrame) -> dict | None:
         """Analyze simulation results and return key metrics.

@@ -8,6 +8,9 @@ import numpy as np
 # Models renewable energy generation, storage systems, demand response, and excess energy allocation
 # Includes energy storage, Direct Air Capture (DAC), and curtailment strategies
 
+# Floating point precision tolerance for residual energy calculations
+FLOATING_POINT_TOLERANCE = 1e-10
+
 
 class SimulationParameters(NamedTuple):
     """Parameters for the core power system simulation."""
@@ -55,8 +58,8 @@ def handle_surplus(
     max_hydrogen_storage: float,
     max_electrolyser: float,
     hydrogen_e_in: float,
-    hydrogen_storage_first: bool,
-) -> tuple[float, float, float, float, float]:
+    only_dac_if_storage_full: bool,
+) -> tuple[float, float, float]:
     """Handle energy surplus with either storage-first or balanced allocation strategy.
 
     Args:
@@ -65,17 +68,17 @@ def handle_surplus(
         max_hydrogen_storage: Maximum hydrogen storage capacity
         max_electrolyser: Maximum electrolyser daily energy
         hydrogen_e_in: Hydrogen storage input efficiency
-        hydrogen_storage_first: If True, prioritize storage completely before DAC;
-                      if False, use balanced allocation
+        only_dac_if_storage_full: If True, DAC only gets energy when storage is full;
+                      if False, DAC can get energy even when storage isn't full
 
     Returns:
-        Tuple of (hydrogen_storage_level, residual_energy, dac_energy, curtailed_energy, stored_energy)
+        Tuple of (hydrogen_storage_level, residual_energy, stored_energy)
     """
     energy_available_for_electrolyser = min(supply_demand, max_electrolyser)
     energy_to_store = energy_available_for_electrolyser * hydrogen_e_in
     hydrogen_storage_space_available = max_hydrogen_storage - prev_hydrogen_storage
 
-    if hydrogen_storage_first:
+    if only_dac_if_storage_full:
         # Storage-first strategy: fill storage completely before any DAC
         if energy_to_store <= hydrogen_storage_space_available:
             # All energy can be stored
@@ -93,14 +96,16 @@ def handle_surplus(
         new_hydrogen_storage_level = min(prev_hydrogen_storage + energy_to_store, max_hydrogen_storage)
         actual_energy_stored = (new_hydrogen_storage_level - prev_hydrogen_storage) / hydrogen_e_in
         residual_energy = supply_demand - actual_energy_stored
+
+        # Fix small negative values due to floating point precision errors
+        # But preserve larger negative values that indicate actual logic errors
+        if residual_energy < 0 and residual_energy > -FLOATING_POINT_TOLERANCE:
+            residual_energy = 0.0
+
         hydrogen_storage_level = new_hydrogen_storage_level
         stored_energy = actual_energy_stored
 
-    # DAC and curtailment will be calculated in main function
-    dac_energy = 0.0
-    curtailed_energy = residual_energy
-
-    return hydrogen_storage_level, residual_energy, dac_energy, curtailed_energy, stored_energy
+    return hydrogen_storage_level, residual_energy, stored_energy
 
 
 @numba.njit(cache=True)
@@ -128,7 +133,7 @@ def simulate_power_system_core(supply_demand_values: np.ndarray, params: Simulat
     max_dac = params.dac_max_daily_energy
     hydrogen_e_in = params.hydrogen_e_in
     hydrogen_e_out = params.hydrogen_e_out
-    hydrogen_storage_first = params.only_dac_if_hydrogen_storage_full
+    only_dac_if_storage_full = params.only_dac_if_hydrogen_storage_full
 
     prev_hydrogen_storage = params.initial_hydrogen_storage_level
 
@@ -150,13 +155,17 @@ def simulate_power_system_core(supply_demand_values: np.ndarray, params: Simulat
 
         elif supply_demand > 0:
             # Energy surplus - use unified handler for both strategies
-            hydrogen_storage_level, residual_energy, dac_energy, curtailed_energy, stored_energy = handle_surplus(
-                supply_demand, prev_hydrogen_storage, max_hydrogen_storage, max_electrolyser, hydrogen_e_in, hydrogen_storage_first
+            hydrogen_storage_level, residual_energy, stored_energy = handle_surplus(
+                supply_demand, prev_hydrogen_storage, max_hydrogen_storage, max_electrolyser, hydrogen_e_in, only_dac_if_storage_full
             )
+
             # Handle DAC allocation for residual energy
             if residual_energy > 0:
                 dac_energy = min(residual_energy, max_dac)
                 curtailed_energy = residual_energy - dac_energy
+            else:
+                dac_energy = 0.0
+                curtailed_energy = 0.0
 
         # Direct array assignment is faster than list creation
         results[i, 0] = hydrogen_storage_level
