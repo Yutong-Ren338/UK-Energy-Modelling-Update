@@ -127,8 +127,6 @@ def test_unmet_demand_by_month() -> None:
     demand_seasonal = demand_model.predicted_demand(mode="seasonal", historical="era5", average_year=False)
     demand_cb7 = demand_model.predicted_demand(mode="cb7", historical="era5", average_year=False)
 
-    A.Nuclear.Capacity = 12 * U.GW
-
     net_supply_naive = supply_model.get_net_supply(demand_naive)
     net_supply_seasonal = supply_model.get_net_supply(demand_seasonal)
     net_supply_cb7 = supply_model.get_net_supply(demand_cb7)
