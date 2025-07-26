@@ -19,7 +19,7 @@ OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 
 SIMULATION_KWARGS = {
     "renewable_capacity": 250 * U.GW,  # Default renewable capacity for the simulation
-    "max_hydrogen_storage_capacity": A.HydrogenStorage.CavernStorage.MaxCapacity,  # Maximum hydrogen storage capacity
+    "hydrogen_storage_capacity": A.HydrogenStorage.CavernStorage.MaxCapacity,  # Maximum hydrogen storage capacity
     "electrolyser_power": A.HydrogenStorage.Electrolysis.Power,  # Electrolyser power capacity
     "dac_capacity": A.DAC.Capacity,  # DAC capacity
 }
@@ -61,7 +61,7 @@ def test_run_simulation_more_aggressive_dac(sample_data: pd.DataFrame) -> None:
     """Test simulation with more aggressive DAC capacity."""
     model = PowerSystem(
         renewable_capacity=250 * U.GW,
-        max_hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
+        hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
         dac_capacity=A.DAC.Capacity,
         only_dac_if_hydrogen_storage_full=False,  # Allow DAC operation when electrolyser capacity is exceeded
@@ -94,7 +94,7 @@ def test_simulation_physical_constraints(power_system_model: PowerSystem, sample
     # Check hydrogen storage level constraints
     hydrogen_storage_col = "hydrogen_storage_level (TWh),RC=250GW"
     assert (net_supply_df[hydrogen_storage_col] >= 0).all(), "Hydrogen storage levels cannot be negative"
-    assert (net_supply_df[hydrogen_storage_col] <= power_system_model.max_hydrogen_storage_capacity * U.TWh).all(), (
+    assert (net_supply_df[hydrogen_storage_col] <= power_system_model.hydrogen_storage_capacity * U.TWh).all(), (
         "Hydrogen storage levels cannot exceed maximum capacity"
     )
 
@@ -134,7 +134,7 @@ def test_simulation_with_custom_renewable_capacity(sample_data: pd.DataFrame) ->
     # Test with different renewable capacities
     custom_model = PowerSystem(
         renewable_capacity=300 * U.GW,
-        max_hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
+        hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
         dac_capacity=A.DAC.Capacity,
     )
@@ -162,7 +162,7 @@ def test_multiple_renewable_capacities(sample_data: pd.DataFrame) -> None:
     for capacity in capacities:
         model = PowerSystem(
             renewable_capacity=capacity * U.GW,
-            max_hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
+            hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
             electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
             dac_capacity=A.DAC.Capacity,
         )
@@ -195,7 +195,7 @@ def test_plot_simulation_results(demand_mode: str) -> None:
     # Create power system model
     storage = PowerSystem(
         renewable_capacity=renewable_capacity * U.GW,
-        max_hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
+        hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
         dac_capacity=A.DAC.Capacity,
     )
@@ -246,7 +246,7 @@ def test_simulation_timing() -> None:
             for storage in max_storage:
                 model = PowerSystem(
                     renewable_capacity=renewable_capacity * U.GW,
-                    max_hydrogen_storage_capacity=storage * U.TWh,
+                    hydrogen_storage_capacity=storage * U.TWh,
                     electrolyser_power=electrolyser_power * U.GW,
                     dac_capacity=A.DAC.Capacity,
                 )

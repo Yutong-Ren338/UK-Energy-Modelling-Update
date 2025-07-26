@@ -16,7 +16,7 @@ class SimulationParameters(NamedTuple):
     """Parameters for the core power system simulation."""
 
     initial_hydrogen_storage_level: float
-    max_hydrogen_storage_capacity: float
+    hydrogen_storage_capacity: float
     electrolyser_max_daily_energy: float
     dac_max_daily_energy: float
     hydrogen_e_in: float
@@ -126,7 +126,7 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
     results = np.zeros((n_timesteps, 5))
 
     # Extract ALL parameters to local variables
-    max_hydrogen_storage = params.max_hydrogen_storage_capacity
+    max_hydrogen_storage = params.hydrogen_storage_capacity
     max_electrolyser = params.electrolyser_max_daily_energy
     max_dac = params.dac_max_daily_energy
     hydrogen_e_in = params.hydrogen_e_in

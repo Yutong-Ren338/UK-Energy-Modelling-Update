@@ -35,7 +35,7 @@ class PowerSystem:
     def __init__(
         self,
         renewable_capacity: int,
-        max_hydrogen_storage_capacity: float,
+        hydrogen_storage_capacity: float,
         electrolyser_power: float,
         dac_capacity: float,
         *,
@@ -45,14 +45,14 @@ class PowerSystem:
 
         Args:
             renewable_capacity: Total renewable generation capacity in GW.
-            max_hydrogen_storage_capacity: Maximum hydrogen energy storage capacity in TWh.
+            hydrogen_storage_capacity: Maximum hydrogen energy storage capacity in TWh.
             electrolyser_power: Power capacity for energy conversion to hydrogen storage in GW.
             dac_capacity: Direct Air Capture system capacity in GW.
             only_dac_if_hydrogen_storage_full: Whether DAC only operates when hydrogen storage is full.
         """
         # check pint units before running
         assert renewable_capacity.units == U.GW, "Renewable capacity must be in GW"
-        assert max_hydrogen_storage_capacity.units == U.TWh, "Max hydrogen storage capacity must be in TWh"
+        assert hydrogen_storage_capacity.units == U.TWh, "Max hydrogen storage capacity must be in TWh"
         assert electrolyser_power.units == U.GW, "Electrolyser power must be in GW"
         assert dac_capacity.units == U.GW, "DAC capacity must be in GW"
 
@@ -63,8 +63,8 @@ class PowerSystem:
         self.hydrogen_e_out = A.HydrogenStorage.Generation.Efficiency
 
         # Set hydrogen storage parameters (store as magnitudes)
-        self.max_hydrogen_storage_capacity = max_hydrogen_storage_capacity.magnitude
-        self.initial_hydrogen_storage_level = self.max_hydrogen_storage_capacity  # Start with full storage
+        self.hydrogen_storage_capacity = hydrogen_storage_capacity.magnitude
+        self.initial_hydrogen_storage_level = self.hydrogen_storage_capacity  # Start with full storage
 
         # Set electrolyser parameters (store as magnitudes)
         self.electrolyser_power = electrolyser_power.magnitude
@@ -109,7 +109,7 @@ class PowerSystem:
         # Create simulation parameters
         params = SimulationParameters(
             initial_hydrogen_storage_level=self.initial_hydrogen_storage_level,
-            max_hydrogen_storage_capacity=self.max_hydrogen_storage_capacity,
+            hydrogen_storage_capacity=self.hydrogen_storage_capacity,
             electrolyser_max_daily_energy=self.electrolyser_max_daily_energy,
             dac_max_daily_energy=self.dac_max_daily_energy,
             hydrogen_e_in=self.hydrogen_e_in,
@@ -140,9 +140,7 @@ class PowerSystem:
         """Validate simulation results to ensure physical constraints are met."""
         assert (df[columns.residual_energy] >= 0).all(), "Residual energy cannot be negative"
         assert (df[columns.curtailed_energy] >= 0).all(), "Unused energy cannot be negative"
-        assert (df[columns.hydrogen_storage_level] <= self.max_hydrogen_storage_capacity * U.TWh).all(), (
-            "Hydrogen storage cannot exceed maximum capacity"
-        )
+        assert (df[columns.hydrogen_storage_level] <= self.hydrogen_storage_capacity * U.TWh).all(), "Hydrogen storage cannot exceed maximum capacity"
         assert (df[columns.dac_energy] <= self.dac_max_daily_energy * U.TWh).all(), "DAC energy cannot exceed its maximum daily capacity"
         assert (df[columns.hydrogen_storage_level] >= 0).all(), "Hydrogen storage cannot be negative"
 
@@ -229,14 +227,14 @@ class PowerSystem:
             label="Energy in Hydrogen Storage",
         )
         ax1.axhline(
-            self.max_hydrogen_storage_capacity,
+            self.hydrogen_storage_capacity,
             linestyle="--",
             color="red",
             linewidth=1.5,
             label="Maximum Hydrogen Storage Capacity",
         )
         ax1.axhline(20, linestyle="--", color="blue", linewidth=1.5, label="Contingency Storage")
-        ax1.set_ylim(0, self.max_hydrogen_storage_capacity * 1.1)
+        ax1.set_ylim(0, self.hydrogen_storage_capacity * 1.1)
         ax1.set_ylabel("Hydrogen Storage Level (TWh)")
         ax1.legend(loc="upper right", fontsize=10, facecolor="white", edgecolor="gray", frameon=True, framealpha=0.9)
 
@@ -257,7 +255,7 @@ class PowerSystem:
             f"Parameters:\n"
             f"• Demand Mode: {demand_mode}\n"
             f"• Renewable Capacity: {self.renewable_capacity:.0f} GW\n"
-            f"• Hydrogen Storage Capacity: {self.max_hydrogen_storage_capacity:.0f} TWh\n"
+            f"• Hydrogen Storage Capacity: {self.hydrogen_storage_capacity:.0f} TWh\n"
             f"• DAC Capacity: {self.dac_capacity:.0f} GW\n"
             f"• Electrolyser Power: {self.electrolyser_power:.0f} GW\n\n"
             f"Results:\n"
