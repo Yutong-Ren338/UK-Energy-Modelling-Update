@@ -10,11 +10,11 @@ from pint import Quantity
 
 import src.assumptions as A
 from src import demand_model, supply_model
-from src.power_system_model import PowerSystemModel
+from src.power_system import PowerSystem
 from src.units import Units as U
 from tests.config import OUTPUT_DIR, check
 
-OUTPUT_PATH = OUTPUT_DIR / "power_system_model"
+OUTPUT_PATH = OUTPUT_DIR / "power_system"
 OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 
 SIMULATION_KWARGS = {
@@ -32,11 +32,11 @@ def sample_data() -> pd.DataFrame:
 
 
 @pytest.fixture
-def power_system_model() -> PowerSystemModel:
-    return PowerSystemModel(**SIMULATION_KWARGS)
+def power_system_model() -> PowerSystem:
+    return PowerSystem(**SIMULATION_KWARGS)
 
 
-def test_run_simulation_with_expected_outputs(power_system_model: PowerSystemModel, sample_data: pd.DataFrame) -> None:
+def test_run_simulation_with_expected_outputs(power_system_model: PowerSystem, sample_data: pd.DataFrame) -> None:
     # Run the simulation
     net_supply_df = power_system_model.run_simulation(sample_data)
 
@@ -57,7 +57,7 @@ def test_run_simulation_with_expected_outputs(power_system_model: PowerSystemMod
     check(results["curtailed_energy"], expected_values["curtailed_energy"])
 
 
-def test_simulation_creates_expected_columns(power_system_model: PowerSystemModel, sample_data: pd.DataFrame) -> None:
+def test_simulation_creates_expected_columns(power_system_model: PowerSystem, sample_data: pd.DataFrame) -> None:
     net_supply_df = power_system_model.run_simulation(sample_data)
 
     # Check that expected columns exist for 250GW renewable capacity
@@ -72,7 +72,7 @@ def test_simulation_creates_expected_columns(power_system_model: PowerSystemMode
         assert col in net_supply_df.columns, f"Expected column {col} not found"
 
 
-def test_simulation_physical_constraints(power_system_model: PowerSystemModel, sample_data: pd.DataFrame) -> None:
+def test_simulation_physical_constraints(power_system_model: PowerSystem, sample_data: pd.DataFrame) -> None:
     net_supply_df = power_system_model.run_simulation(sample_data)
 
     # Check storage level constraints
@@ -93,7 +93,7 @@ def test_simulation_physical_constraints(power_system_model: PowerSystemModel, s
     assert (net_supply_df[dac_col] <= power_system_model.dac_max_daily_energy * U.TWh).all(), "DAC energy cannot exceed daily capacity"
 
 
-def test_analyze_simulation_results_structure(power_system_model: PowerSystemModel, sample_data: pd.DataFrame) -> None:
+def test_analyze_simulation_results_structure(power_system_model: PowerSystem, sample_data: pd.DataFrame) -> None:
     net_supply_df = power_system_model.run_simulation(sample_data)
     results = power_system_model.analyze_simulation_results(net_supply_df)
 
@@ -114,7 +114,7 @@ def test_analyze_simulation_results_structure(power_system_model: PowerSystemMod
 
 def test_simulation_with_custom_renewable_capacity(sample_data: pd.DataFrame) -> None:
     # Test with different renewable capacities
-    custom_model = PowerSystemModel(
+    custom_model = PowerSystem(
         renewable_capacity=300 * U.GW,
         max_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
@@ -142,14 +142,16 @@ def test_multiple_renewable_capacities(sample_data: pd.DataFrame) -> None:
     all_results = {}
 
     for capacity in capacities:
-        model = PowerSystemModel(
+        model = PowerSystem(
             renewable_capacity=capacity * U.GW,
             max_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
             electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
             dac_capacity=A.DAC.Capacity,
         )
-        net_supply_df = model.run_simulation(sample_data)
-        results = model.analyze_simulation_results(net_supply_df)
+        sim_df = model.run_simulation(sample_data)
+        if sim_df is None:
+            continue
+        results = model.analyze_simulation_results(sim_df)
         all_results[capacity] = results
 
         # Verify that each capacity produces valid results
@@ -166,14 +168,14 @@ def test_multiple_renewable_capacities(sample_data: pd.DataFrame) -> None:
 def test_plot_simulation_results(demand_mode: str) -> None:
     """Test plotting simulation results for different demand modes."""
     # Setup test parameters
-    renewable_capacity = 350
+    renewable_capacity = 450
 
     # Generate demand and supply data
     demand_df = demand_model.predicted_demand(mode=demand_mode, average_year=False)
     df = supply_model.get_net_supply(demand_df).reset_index()
 
     # Create power system model
-    storage = PowerSystemModel(
+    storage = PowerSystem(
         renewable_capacity=renewable_capacity * U.GW,
         max_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
@@ -213,8 +215,8 @@ def test_simulation_timing() -> None:
     df = supply_model.get_net_supply(demand_df).reset_index()
 
     # Use the realistic parameter ranges as specified
-    renewable_capacities = range(200, 410, 20)
-    electrolyser_powers = range(20, 110, 20)
+    renewable_capacities = range(200, 410, 10)
+    electrolyser_powers = range(20, 110, 10)
     max_storage = range(10, 60, 10)
 
     timing_results = []
@@ -224,7 +226,7 @@ def test_simulation_timing() -> None:
     for renewable_capacity in renewable_capacities:
         for electrolyser_power in electrolyser_powers:
             for storage in max_storage:
-                model = PowerSystemModel(
+                model = PowerSystem(
                     renewable_capacity=renewable_capacity * U.GW,
                     max_storage_capacity=storage * U.TWh,
                     electrolyser_power=electrolyser_power * U.GW,

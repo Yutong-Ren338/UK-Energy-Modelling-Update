@@ -18,6 +18,12 @@
 - [x] make it trivial to switch between seasonal, naive, and CCC demand models
 - [ ] use heating degree days for an independent way to model seasonality
 
+### Supply modelling
+
+- [ ] Check wind/solar mix from CB7 and FES (or try optimising ourselves)
+- [ ] Granular supply model using renewables ninja
+
+
 ### Energy system modelling
 
 - [x] implement storage model
@@ -29,9 +35,14 @@
 - [ ] add interconnectors
     - Maj looked at this already, found approx 14 GW capacity meeting on average 6% of demand per year
     - Can probably get these numbers from ESPENI dataset, and other sources
+    - CB7 says 28 GW capacity by 2050
 - [ ] add dispatchable low carbon generation (gas + CCS)
-    - [ ] Review CB7, FES 2025, and RS report assumptions
+    - Review CB7, FES 2025, and RS report assumptions
+    - In CB7 it's about 18 GW (20 GW is cited for electrolyser and total low carbon dispatchable generation is 38 GW). They also emphasise that the exact tradeoff between gas and hydrogen generation is uncertain, and will depend on the evolution of costs and efficiencies.
 - [ ] move to hourly time resolution
+- [ ] Medium term storage (CB7): A range of other options can provide storage over the medium term (days-to-weeks), including pumped hydro and other technologies at different stages of commercialisation (for example, compressed and liquid air storage, flow batteries, and thermal storage). Our analysis deploys 7 GW of medium-duration grid storage by 2050, (433 GWh of storage capacity).
+- [x] use numba to speed up the core simulation loop
+- [ ] use multiprocessing for parallel runs
 
 ### Economic modelling
 
@@ -45,4 +56,7 @@
 
 ### Analysis & visualisation
 
-- [ ] Look at fraction unmet demand instead of fraction days with unmet demand
+- [x] Look at total unmet demand instead of fraction days with unmet demand
+- [ ] Also plot unmet demand as a function of day of year
+- [ ] Improve visualisation of single simulation result
+- [ ] Do those 40 year plots but X axis is a single year, to see if there are yearly trends 
