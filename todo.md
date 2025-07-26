@@ -43,6 +43,7 @@
 - [ ] Medium term storage (CB7): A range of other options can provide storage over the medium term (days-to-weeks), including pumped hydro and other technologies at different stages of commercialisation (for example, compressed and liquid air storage, flow batteries, and thermal storage). Our analysis deploys 7 GW of medium-duration grid storage by 2050, (433 GWh of storage capacity).
 - [x] use numba to speed up the core simulation loop
 - [ ] use multiprocessing for parallel runs
+- [ ] configurable simulation start storage levels (test 0, 50%, 100% full)
 
 ### Economic modelling
 
