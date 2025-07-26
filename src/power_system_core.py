@@ -78,8 +78,7 @@ def handle_surplus(
     energy_to_store = energy_available_for_electrolyser * hydrogen_e_in
     hydrogen_storage_space_available = max_hydrogen_storage - prev_hydrogen_storage
 
-    if only_dac_if_storage_full:
-        # Storage-first strategy: fill storage completely before any DAC
+    if only_dac_if_storage_full:  # fill storage completely before any DAC
         if energy_to_store <= hydrogen_storage_space_available:
             # All energy can be stored
             hydrogen_storage_level = prev_hydrogen_storage + energy_to_store
@@ -91,8 +90,7 @@ def handle_surplus(
             residual_energy = net_supply - energy_used_for_storage
             hydrogen_storage_level = max_hydrogen_storage
             stored_energy = energy_used_for_storage
-    else:
-        # Balanced strategy: store what fits, residual goes to DAC
+    else:  # max out electrolyser and then use DAC (even if storage isn't full)
         new_hydrogen_storage_level = min(prev_hydrogen_storage + energy_to_store, max_hydrogen_storage)
         actual_energy_stored = (new_hydrogen_storage_level - prev_hydrogen_storage) / hydrogen_e_in
         residual_energy = net_supply - actual_energy_stored
