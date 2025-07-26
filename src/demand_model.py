@@ -114,7 +114,7 @@ def map_years(historical_df: pd.DataFrame, predicted_df: pd.DataFrame) -> pd.Dat
     historical_years = historical_df.index.year.unique()
 
     # map each historical year to a random choice from available years
-    mapping = np.random.default_rng().choice(available_years, len(historical_years))
+    mapping = np.random.default_rng(seed=42).choice(available_years, len(historical_years))
     historical_df["year"] = historical_df.index.year
     historical_df["year"] = historical_df["year"].map(dict(zip(historical_years, mapping, strict=False)))
 

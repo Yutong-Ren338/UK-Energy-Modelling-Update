@@ -47,6 +47,7 @@ class PowerSystem:
     # - FES 2025 states that transmission losses are around 2% today but increasing to 3% by 2050
     # - DUKES 2024 says that 2023 total losses are around 9%
     TotalLosses = 0.113
+    DispatchableGasCCS = 18 * U.GW
 
 
 # ============================================================================
@@ -119,6 +120,15 @@ class Nuclear:
         + LCOE.LargeReactors * CapacityRatios.LargeReactors
         + LCOE.SmallReactors * CapacityRatios.SmallReactors
     )
+
+
+# ============================================================================
+# MEDIUM-TERM ENERGY STORAGE
+# ============================================================================
+class MediumTermStorage:
+    Power = 7 * U.GW  # Power capacity of the medium-term storage system
+    Capacity = 0.433 * U.TWh  # Energy capacity of the medium-term storage system
+    RoundTripEfficiency = 0.70  # Round-trip efficiency for medium-term storage
 
 
 # ============================================================================

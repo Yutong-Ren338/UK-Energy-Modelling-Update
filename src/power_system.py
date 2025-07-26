@@ -17,11 +17,13 @@ from src.units import Units as U
 class SimulationColumns(NamedTuple):
     """Container for power system simulation column names."""
 
+    medium_storage_level: str
     hydrogen_storage_level: str
     residual_energy: str
     dac_energy: str
     curtailed_energy: str
-    energy_into_storage: str
+    energy_into_medium_storage: str
+    energy_into_hydrogen_storage: str
 
 
 class PowerSystem:
@@ -34,11 +36,13 @@ class PowerSystem:
 
     def __init__(
         self,
+        *,
         renewable_capacity: int,
         hydrogen_storage_capacity: float,
         electrolyser_power: float,
         dac_capacity: float,
-        *,
+        medium_storage_capacity: float | None = None,
+        medium_storage_power: float | None = None,
         only_dac_if_hydrogen_storage_full: bool = True,
     ) -> None:
         """Initialize the power system model with required parameters.
@@ -48,6 +52,8 @@ class PowerSystem:
             hydrogen_storage_capacity: Maximum hydrogen energy storage capacity in TWh.
             electrolyser_power: Power capacity for energy conversion to hydrogen storage in GW.
             dac_capacity: Direct Air Capture system capacity in GW.
+            medium_storage_capacity: Maximum medium-term storage capacity in TWh. If None, uses default from assumptions.
+            medium_storage_power: Medium-term storage power capacity in GW. If None, uses default from assumptions.
             only_dac_if_hydrogen_storage_full: Whether DAC only operates when hydrogen storage is full.
         """
         # check pint units before running
@@ -55,6 +61,18 @@ class PowerSystem:
         assert hydrogen_storage_capacity.units == U.TWh, "Max hydrogen storage capacity must be in TWh"
         assert electrolyser_power.units == U.GW, "Electrolyser power must be in GW"
         assert dac_capacity.units == U.GW, "DAC capacity must be in GW"
+
+        # Set medium-term storage parameters with defaults from assumptions
+        if medium_storage_capacity is None:
+            medium_storage_capacity = A.MediumTermStorage.Capacity
+        if medium_storage_power is None:
+            medium_storage_power = A.MediumTermStorage.Power
+
+        assert medium_storage_capacity.units == U.TWh, "Medium storage capacity must be in TWh"
+        assert medium_storage_power.units == U.GW, "Medium storage power must be in GW"
+
+        if medium_storage_capacity == 0:
+            assert medium_storage_power == 0, "If medium storage capacity is zero, power must also be zero"
 
         self.renewable_capacity = renewable_capacity.magnitude
 
@@ -65,6 +83,13 @@ class PowerSystem:
         # Set hydrogen storage parameters (store as magnitudes)
         self.hydrogen_storage_capacity = hydrogen_storage_capacity.magnitude
         self.initial_hydrogen_storage_level = self.hydrogen_storage_capacity  # Start with full storage
+
+        # Set medium-term storage parameters (store as magnitudes)
+        self.medium_storage_capacity = medium_storage_capacity.magnitude
+        self.medium_storage_power = medium_storage_power.magnitude
+        self.medium_storage_max_daily_energy = (medium_storage_power * A.HoursPerDay).to(U.TWh).magnitude
+        self.medium_storage_efficiency = A.MediumTermStorage.RoundTripEfficiency
+        self.initial_medium_storage_level = self.medium_storage_capacity  # Start with full storage
 
         # Set electrolyser parameters (store as magnitudes)
         self.electrolyser_power = electrolyser_power.magnitude
@@ -96,11 +121,13 @@ class PowerSystem:
             supply_demand_col = f"S-D(TWh),Ren={self.renewable_capacity}GW"
 
         columns = SimulationColumns(
+            medium_storage_level=f"medium_storage_level (TWh),RC={self.renewable_capacity}GW",
             hydrogen_storage_level=f"hydrogen_storage_level (TWh),RC={self.renewable_capacity}GW",
             residual_energy=f"residual_energy (TWh),RC={self.renewable_capacity}GW",
             dac_energy=f"dac_energy (TWh),RC={self.renewable_capacity}GW",
             curtailed_energy=f"curtailed_energy (TWh),RC={self.renewable_capacity}GW",
-            energy_into_storage=f"energy_into_storage (TWh),RC={self.renewable_capacity}GW",
+            energy_into_medium_storage=f"energy_into_medium_storage (TWh),RC={self.renewable_capacity}GW",
+            energy_into_hydrogen_storage=f"energy_into_hydrogen_storage (TWh),RC={self.renewable_capacity}GW",
         )
 
         # Get supply-demand values as numpy array for faster processing
@@ -115,6 +142,10 @@ class PowerSystem:
             hydrogen_e_in=self.hydrogen_e_in,
             hydrogen_e_out=self.hydrogen_e_out,
             only_dac_if_hydrogen_storage_full=self.only_dac_if_hydrogen_storage_full,
+            initial_medium_storage_level=self.initial_medium_storage_level,
+            medium_storage_capacity=self.medium_storage_capacity,
+            medium_storage_power=self.medium_storage_max_daily_energy,
+            medium_storage_efficiency=self.medium_storage_efficiency,
         )
 
         # Run the core simulation
@@ -125,11 +156,13 @@ class PowerSystem:
             return None
 
         # Assign results back to DataFrame with proper units
-        df[columns.hydrogen_storage_level] = pd.Series(results[:, 0], dtype="pint[TWh]")
-        df[columns.residual_energy] = pd.Series(results[:, 1], dtype="pint[TWh]")
-        df[columns.dac_energy] = pd.Series(results[:, 2], dtype="pint[TWh]")
-        df[columns.curtailed_energy] = pd.Series(results[:, 3], dtype="pint[TWh]")
-        df[columns.energy_into_storage] = pd.Series(results[:, 4], dtype="pint[TWh]")
+        df[columns.medium_storage_level] = pd.Series(results[:, 0], dtype="pint[TWh]")
+        df[columns.hydrogen_storage_level] = pd.Series(results[:, 1], dtype="pint[TWh]")
+        df[columns.residual_energy] = pd.Series(results[:, 2], dtype="pint[TWh]")
+        df[columns.dac_energy] = pd.Series(results[:, 3], dtype="pint[TWh]")
+        df[columns.curtailed_energy] = pd.Series(results[:, 4], dtype="pint[TWh]")
+        df[columns.energy_into_medium_storage] = pd.Series(results[:, 5], dtype="pint[TWh]")
+        df[columns.energy_into_hydrogen_storage] = pd.Series(results[:, 6], dtype="pint[TWh]")
 
         # === VALIDATE RESULTS ===
         self._validate_simulation_results(df, columns)
@@ -141,8 +174,10 @@ class PowerSystem:
         assert (df[columns.residual_energy] >= 0).all(), "Residual energy cannot be negative"
         assert (df[columns.curtailed_energy] >= 0).all(), "Unused energy cannot be negative"
         assert (df[columns.hydrogen_storage_level] <= self.hydrogen_storage_capacity * U.TWh).all(), "Hydrogen storage cannot exceed maximum capacity"
+        assert (df[columns.medium_storage_level] <= self.medium_storage_capacity * U.TWh).all(), "Medium storage cannot exceed maximum capacity"
         assert (df[columns.dac_energy] <= self.dac_max_daily_energy * U.TWh).all(), "DAC energy cannot exceed its maximum daily capacity"
         assert (df[columns.hydrogen_storage_level] >= 0).all(), "Hydrogen storage cannot be negative"
+        assert (df[columns.medium_storage_level] >= 0).all(), "Medium storage cannot be negative"
 
     def analyze_simulation_results(self, sim_df: pd.DataFrame) -> dict | None:
         """Analyze simulation results and return key metrics.
@@ -158,11 +193,13 @@ class PowerSystem:
             return None
 
         # Define column names
+        medium_storage_column = f"medium_storage_level (TWh),RC={int(self.renewable_capacity)}GW"
         hydrogen_storage_column = f"hydrogen_storage_level (TWh),RC={int(self.renewable_capacity)}GW"
         dac_column = f"dac_energy (TWh),RC={int(self.renewable_capacity)}GW"
         unused_column = f"curtailed_energy (TWh),RC={int(self.renewable_capacity)}GW"
 
         # Calculate key metrics
+        minimum_medium_storage = sim_df[medium_storage_column].min()
         minimum_hydrogen_storage = sim_df[hydrogen_storage_column].min()
         annual_dac_energy = sim_df[dac_column].mean() * 365
         # Calculate capacity factor as actual usage vs maximum possible daily energy
@@ -170,6 +207,7 @@ class PowerSystem:
         curtailed_energy = sim_df[unused_column].mean() * 365
 
         return {
+            "minimum_medium_storage": minimum_medium_storage,
             "minimum_hydrogen_storage": minimum_hydrogen_storage,
             "annual_dac_energy": annual_dac_energy,
             "dac_capacity_factor": dac_capacity_factor,
@@ -180,6 +218,7 @@ class PowerSystem:
     def format_simulation_results(results: dict) -> str:
         """Return simulation results in a formatted way."""
         return (
+            f"minimum medium storage is {results['minimum_medium_storage']:.1f}\n"
             f"minimum hydrogen storage is {results['minimum_hydrogen_storage']:.1f}\n"
             f"DAC energy is {results['annual_dac_energy']:.1f}\n"
             f"DAC Capacity Factor is {results['dac_capacity_factor']:.1%}\n"
@@ -218,35 +257,57 @@ class PowerSystem:
         # Create gridspec: 2 rows, 4 columns (3 for left plots, 1 for right text)
         gs = gridspec.GridSpec(2, 4, figure=fig, hspace=0.0, wspace=0.1)
 
-        # Left plots take first 3 columns
+        # Top plot: Combined storage as percentage filled
         ax1 = fig.add_subplot(gs[0, :3])
+
+        # Calculate percentage filled for both storage types
+        medium_storage_pct = (
+            (sim_df[f"medium_storage_level (TWh),RC={self.renewable_capacity}GW"] / self.medium_storage_capacity * 100)
+            if self.medium_storage_capacity > 0
+            else pd.Series([0] * len(sim_df))
+        )
+        hydrogen_storage_pct = sim_df[f"hydrogen_storage_level (TWh),RC={self.renewable_capacity}GW"] / self.hydrogen_storage_capacity * 100
+
         ax1.plot(
-            sim_df[f"hydrogen_storage_level (TWh),RC={self.renewable_capacity}GW"],
+            medium_storage_pct,
+            color="orange",
+            linewidth=0.8,
+            label="Medium-term Storage",
+        )
+        ax1.plot(
+            hydrogen_storage_pct,
             color="green",
-            linewidth=0.5,
-            label="Energy in Hydrogen Storage",
+            linewidth=0.8,
+            label="Hydrogen Storage",
         )
-        ax1.axhline(
-            self.hydrogen_storage_capacity,
-            linestyle="--",
-            color="red",
-            linewidth=1.5,
-            label="Maximum Hydrogen Storage Capacity",
-        )
-        ax1.axhline(20, linestyle="--", color="blue", linewidth=1.5, label="Contingency Storage")
-        ax1.set_ylim(0, self.hydrogen_storage_capacity * 1.1)
-        ax1.set_ylabel("Hydrogen Storage Level (TWh)")
+
+        # Add reference lines
+        if self.hydrogen_storage_capacity > 0:
+            contingency_pct = (20 / self.hydrogen_storage_capacity) * 100
+            ax1.axhline(contingency_pct, linestyle="--", color="red", linewidth=1.5, label="Hydrogen Contingency")
+
+        ax1.set_ylim(0, 110)
+        ax1.set_ylabel("Storage Level (%)")
         ax1.legend(loc="upper right", fontsize=10, facecolor="white", edgecolor="gray", frameon=True, framealpha=0.9)
 
+        # Bottom plot: Energy flows
         ax2 = fig.add_subplot(gs[1, :3])
         ax2.plot(sim_df[f"curtailed_energy (TWh),RC={self.renewable_capacity}GW"], color="black", linewidth=0.5, label="Curtailed Energy")
-        ax2.plot(sim_df[f"energy_into_storage (TWh),RC={self.renewable_capacity}GW"], color="green", linewidth=0.5, label="Stored Energy")
+        ax2.plot(
+            sim_df[f"energy_into_hydrogen_storage (TWh),RC={self.renewable_capacity}GW"],
+            color="green",
+            linewidth=0.5,
+            label="Energy to Hydrogen Storage",
+        )
         ax2.plot(sim_df[f"dac_energy (TWh),RC={self.renewable_capacity}GW"], color="red", linewidth=0.5, label="DAC Energy")
+        ax2.plot(
+            sim_df[f"energy_into_medium_storage (TWh),RC={self.renewable_capacity}GW"], color="blue", linewidth=0.5, label="Energy to Medium Storage"
+        )
         ax2.set_xlabel("Day in 40 Years")
         ax2.set_ylabel("Energy (TWh)")
         ax2.legend(loc="upper right", fontsize=10, facecolor="white", edgecolor="gray", frameon=True, framealpha=0.9)
 
-        # Text subplot spans both rows in the rightmost column
+        # Text subplot spans all rows in the rightmost column
         ax3 = fig.add_subplot(gs[:, 3])
         ax3.axis("off")
 
@@ -255,6 +316,8 @@ class PowerSystem:
             f"Parameters:\n"
             f"• Demand Mode: {demand_mode}\n"
             f"• Renewable Capacity: {self.renewable_capacity:.0f} GW\n"
+            f"• Medium Storage Capacity: {self.medium_storage_capacity:.1f} TWh\n"
+            f"• Medium Storage Power: {self.medium_storage_power:.0f} GW\n"
             f"• Hydrogen Storage Capacity: {self.hydrogen_storage_capacity:.0f} TWh\n"
             f"• DAC Capacity: {self.dac_capacity:.0f} GW\n"
             f"• Electrolyser Power: {self.electrolyser_power:.0f} GW\n\n"
