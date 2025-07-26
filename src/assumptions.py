@@ -35,16 +35,23 @@ DiscountRate = 0.05
 GBPToUSD = 1.35  # 2024 Average Closing USD/GBP exchange rate
 GBPToEuro = 1.18  # Just use the number from the RS report
 
+
+# ============================================================================
+# POWER SYSTEM
+# ============================================================================
+class PowerSystem:
+    # Transmission and distribution losses in the energy system
+    # This is taken by taking the ratio of the CB7 hourly demand data (which is supply side),
+    # to the demand in the main CB7 workbook (which is end use demand).
+    # Other sources:
+    # - FES 2025 states that transmission losses are around 2% today but increasing to 3% by 2050
+    # - DUKES 2024 says that 2023 total losses are around 9%
+    TotalLosses = 0.113
+
+
 # ============================================================================
 # RENEWABLE ENERGY
 # ============================================================================
-# Transmission and distribution losses in the energy system
-# This is taken by taking the ratio of the CB7 hourly demand data (which is supply side),
-# to the demand in the main CB7 workbook (which is end use demand).
-# Other sources:
-# - FES 2025 states that transmission losses are around 2% today but increasing to 3% by 2050
-# - DUKES 2024 says that 2023 total losses are around 9%
-EnergySystemLosses = 0.113
 
 
 class Renewables:

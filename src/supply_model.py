@@ -40,7 +40,7 @@ def get_net_supply(demand_df: pd.DataFrame) -> pd.DataFrame:
     supply_df = pd.DataFrame({capacity.magnitude: daily_renewables_capacity(capacity, daily_capacity_factors) for capacity in renewable_capacities})
 
     # apply losses to supply
-    supply_df *= 1 - A.EnergySystemLosses
+    supply_df *= 1 - A.PowerSystem.TotalLosses
 
     # reindex for subtraction
     common_idx = supply_df.index.intersection(demand_df.index)
