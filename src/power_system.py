@@ -133,8 +133,8 @@ class SimulationColumns(NamedTuple):
     stored_energy: str
 
 
-class PowerSystemModel:
-    """Comprehensive power system simulation model with configurable parameters.
+class PowerSystem:
+    """Comprehensive power system simulation with configurable parameters.
 
     Models the interaction between renewable energy generation, energy storage systems,
     demand response, Direct Air Capture (DAC), and energy curtailment strategies.
