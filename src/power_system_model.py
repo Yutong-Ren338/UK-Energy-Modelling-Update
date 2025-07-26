@@ -27,7 +27,7 @@ class SimulationParameters(NamedTuple):
 
 
 @numba.njit(cache=True)
-def run_power_system_simulation_core(supply_demand_values: np.ndarray, params: SimulationParameters) -> np.ndarray:  # noqa: PLR0915
+def simulate_power_system_core(supply_demand_values: np.ndarray, params: SimulationParameters) -> np.ndarray:  # noqa: PLR0915
     """Core simulation function optimized for Numba JIT compilation.
 
     This function contains the complete timestep-by-timestep simulation logic
@@ -227,7 +227,7 @@ class PowerSystemModel:
         )
 
         # Run the core simulation
-        results = run_power_system_simulation_core(supply_demand_values, params)
+        results = simulate_power_system_core(supply_demand_values, params)
 
         # Check if simulation failed (storage hit zero)
         if np.isnan(results).any():
