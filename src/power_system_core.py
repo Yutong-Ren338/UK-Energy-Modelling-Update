@@ -135,7 +135,6 @@ def handle_surplus(
     hydrogen_storage_level = prev_hydrogen_storage
     energy_into_medium_storage = 0.0
     energy_into_hydrogen_storage = 0.0
-    curtailed_energy = 0.0
 
     # First priority: fill medium-term storage
     if remaining_energy > 0 and prev_medium_storage < max_medium_storage:
@@ -152,51 +151,45 @@ def handle_surplus(
             remaining_energy -= max_energy_to_medium
 
     # Second priority: hydrogen storage via electrolyser
+    electrolyser_curtailed_energy = 0.0
     if remaining_energy > 0:
+        # Apply electrolyser power constraint first
         energy_available_for_electrolysis = min(remaining_energy, max_electrolyser)
-        max_storable_hydrogen = energy_available_for_electrolysis * hydrogen_e_in
-        available_hydrogen_capacity = max_hydrogen_storage - prev_hydrogen_storage
+        electrolyser_curtailed_energy = remaining_energy - energy_available_for_electrolysis
 
-        if only_dac_if_storage_full:  # fill hydrogen storage completely before any DAC
-            if max_storable_hydrogen <= available_hydrogen_capacity:
-                # All electrolyser energy can be stored - no DAC energy available yet
-                actual_stored_hydrogen = max_storable_hydrogen
-                energy_into_hydrogen_storage = energy_available_for_electrolysis
-                surplus_energy = 0.0
-                # Energy curtailed due to electrolyser capacity limitation
-                electrolyser_curtailed = remaining_energy - energy_available_for_electrolysis
-            else:
-                # Hydrogen storage capacity exceeded - fill completely, rest available for DAC
-                actual_stored_hydrogen = available_hydrogen_capacity
-                energy_into_hydrogen_storage = actual_stored_hydrogen / hydrogen_e_in
-                surplus_energy = remaining_energy - energy_into_hydrogen_storage
-                # Energy curtailed due to electrolyser capacity limitation
-                electrolyser_curtailed = remaining_energy - energy_available_for_electrolysis
+        # Then apply hydrogen storage capacity constraint if storage not full
+        if prev_hydrogen_storage < max_hydrogen_storage:
+            available_hydrogen_capacity = max_hydrogen_storage - prev_hydrogen_storage
+            max_energy_to_hydrogen = min(energy_available_for_electrolysis, available_hydrogen_capacity / hydrogen_e_in)
 
-            hydrogen_storage_level = prev_hydrogen_storage + actual_stored_hydrogen
-            curtailed_energy = electrolyser_curtailed
+            if max_energy_to_hydrogen > 0:
+                energy_into_hydrogen_storage = max_energy_to_hydrogen
+                # Account for storage efficiency
+                actual_stored_hydrogen = max_energy_to_hydrogen * hydrogen_e_in
+                hydrogen_storage_level = prev_hydrogen_storage + actual_stored_hydrogen
+                remaining_energy -= max_energy_to_hydrogen
 
-        else:  # max out electrolyser and then use DAC (even if hydrogen storage isn't full)
-            # Calculate how much hydrogen can actually be stored
-            actual_stored_hydrogen = min(max_storable_hydrogen, available_hydrogen_capacity)
-            new_hydrogen_storage_level = prev_hydrogen_storage + actual_stored_hydrogen
-
-            # Calculate energy used for hydrogen storage
-            energy_into_hydrogen_storage = actual_stored_hydrogen / hydrogen_e_in
-
-            # Remaining energy is available for DAC
-            surplus_energy = remaining_energy - energy_into_hydrogen_storage
-
-            # Fix small negative values due to floating point precision errors
-            if surplus_energy < 0 and surplus_energy > -FLOATING_POINT_TOLERANCE:
-                surplus_energy = 0.0
-
-            hydrogen_storage_level = new_hydrogen_storage_level
-            curtailed_energy = 0.0
+    # Calculate surplus energy for DAC allocation
+    if only_dac_if_storage_full:
+        # DAC energy only available if hydrogen storage is full
+        if hydrogen_storage_level >= max_hydrogen_storage:
+            surplus_energy = remaining_energy
+        else:
+            surplus_energy = 0.0
+            # If hydrogen storage isn't full, any remaining energy is curtailed
+            electrolyser_curtailed_energy += remaining_energy
     else:
-        surplus_energy = 0.0
+        # All remaining energy available for DAC
+        surplus_energy = remaining_energy
 
-    return (medium_storage_level, hydrogen_storage_level, surplus_energy, energy_into_medium_storage, energy_into_hydrogen_storage, curtailed_energy)
+    return (
+        medium_storage_level,
+        hydrogen_storage_level,
+        surplus_energy,
+        energy_into_medium_storage,
+        energy_into_hydrogen_storage,
+        electrolyser_curtailed_energy,
+    )
 
 
 @numba.njit(cache=True)
