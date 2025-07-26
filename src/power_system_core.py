@@ -72,7 +72,7 @@ def handle_surplus(
                       if False, DAC can get energy even when storage isn't full
 
     Returns:
-        Tuple of (hydrogen_storage_level, residual_energy, stored_energy)
+        Tuple of (hydrogen_storage_level, residual_energy, energy_into_storage)
     """
     energy_available_for_electrolyser = min(net_supply, max_electrolyser)
     energy_to_store = energy_available_for_electrolyser * hydrogen_e_in
@@ -82,18 +82,18 @@ def handle_surplus(
         if energy_to_store <= hydrogen_storage_space_available:
             # All energy can be stored
             hydrogen_storage_level = prev_hydrogen_storage + energy_to_store
-            stored_energy = energy_available_for_electrolyser
+            energy_into_storage = energy_available_for_electrolyser
             residual_energy = 0.0
         else:
             # Storage gets filled, excess energy available for DAC
             energy_used_for_storage = hydrogen_storage_space_available / hydrogen_e_in
             residual_energy = net_supply - energy_used_for_storage
             hydrogen_storage_level = max_hydrogen_storage
-            stored_energy = energy_used_for_storage
+            energy_into_storage = energy_used_for_storage
     else:  # max out electrolyser and then use DAC (even if storage isn't full)
         new_hydrogen_storage_level = min(prev_hydrogen_storage + energy_to_store, max_hydrogen_storage)
-        actual_energy_stored = (new_hydrogen_storage_level - prev_hydrogen_storage) / hydrogen_e_in
-        residual_energy = net_supply - actual_energy_stored
+        energy_into_storage = (new_hydrogen_storage_level - prev_hydrogen_storage) / hydrogen_e_in
+        residual_energy = net_supply - energy_into_storage
 
         # Fix small negative values due to floating point precision errors
         # But preserve larger negative values that indicate actual logic errors
@@ -101,9 +101,8 @@ def handle_surplus(
             residual_energy = 0.0
 
         hydrogen_storage_level = new_hydrogen_storage_level
-        stored_energy = actual_energy_stored
 
-    return hydrogen_storage_level, residual_energy, stored_energy
+    return hydrogen_storage_level, residual_energy, energy_into_storage
 
 
 @numba.njit(cache=True)
@@ -119,7 +118,7 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
 
     Returns:
         Array of shape (n_timesteps, 5) containing:
-        [hydrogen_storage_level, residual_energy, dac_energy, curtailed_energy, stored_energy]
+        [hydrogen_storage_level, residual_energy, dac_energy, curtailed_energy, energy_into_storage]
         Returns array filled with NaN values if simulation fails (storage hits zero).
     """
     n_timesteps = len(net_supply_values)
@@ -146,11 +145,11 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
                 return results
 
             # Deficit scenario - all other values are zero
-            residual_energy = dac_energy = curtailed_energy = stored_energy = 0.0
+            residual_energy = dac_energy = curtailed_energy = energy_into_storage = 0.0
 
         else:
             # Energy surplus - use unified handler for both strategies
-            hydrogen_storage_level, residual_energy, stored_energy = handle_surplus(
+            hydrogen_storage_level, residual_energy, energy_into_storage = handle_surplus(
                 net_supply, prev_hydrogen_storage, max_hydrogen_storage, max_electrolyser, hydrogen_e_in, only_dac_if_storage_full
             )
 
@@ -163,7 +162,7 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
         results[i, 1] = residual_energy
         results[i, 2] = dac_energy
         results[i, 3] = curtailed_energy
-        results[i, 4] = stored_energy
+        results[i, 4] = energy_into_storage
 
         prev_hydrogen_storage = hydrogen_storage_level
 

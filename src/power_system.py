@@ -21,7 +21,7 @@ class SimulationColumns(NamedTuple):
     residual_energy: str
     dac_energy: str
     curtailed_energy: str
-    stored_energy: str
+    energy_into_storage: str
 
 
 class PowerSystem:
@@ -100,7 +100,7 @@ class PowerSystem:
             residual_energy=f"residual_energy (TWh),RC={self.renewable_capacity}GW",
             dac_energy=f"dac_energy (TWh),RC={self.renewable_capacity}GW",
             curtailed_energy=f"curtailed_energy (TWh),RC={self.renewable_capacity}GW",
-            stored_energy=f"stored_energy (TWh),RC={self.renewable_capacity}GW",
+            energy_into_storage=f"energy_into_storage (TWh),RC={self.renewable_capacity}GW",
         )
 
         # Get supply-demand values as numpy array for faster processing
@@ -129,7 +129,7 @@ class PowerSystem:
         df[columns.residual_energy] = pd.Series(results[:, 1], dtype="pint[TWh]")
         df[columns.dac_energy] = pd.Series(results[:, 2], dtype="pint[TWh]")
         df[columns.curtailed_energy] = pd.Series(results[:, 3], dtype="pint[TWh]")
-        df[columns.stored_energy] = pd.Series(results[:, 4], dtype="pint[TWh]")
+        df[columns.energy_into_storage] = pd.Series(results[:, 4], dtype="pint[TWh]")
 
         # === VALIDATE RESULTS ===
         self._validate_simulation_results(df, columns)
@@ -239,7 +239,7 @@ class PowerSystem:
         ax1.legend(loc="upper right", fontsize=10, facecolor="white", edgecolor="gray", frameon=True, framealpha=0.9)
 
         ax2 = fig.add_subplot(gs[1, :3])
-        ax2.plot(sim_df[f"stored_energy (TWh),RC={self.renewable_capacity}GW"], color="green", linewidth=0.5, label="Stored Energy")
+        ax2.plot(sim_df[f"energy_into_storage (TWh),RC={self.renewable_capacity}GW"], color="green", linewidth=0.5, label="Stored Energy")
         ax2.plot(sim_df[f"curtailed_energy (TWh),RC={self.renewable_capacity}GW"], color="black", linewidth=0.5, label="Curtailed Energy")
         ax2.plot(sim_df[f"dac_energy (TWh),RC={self.renewable_capacity}GW"], color="red", linewidth=0.5, label="DAC Energy")
         ax2.set_xlabel("Day in 40 Years")
