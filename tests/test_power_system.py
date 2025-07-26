@@ -57,15 +57,14 @@ def test_run_simulation_with_expected_outputs(power_system_model: PowerSystem, s
     check(results["curtailed_energy"], expected_values["curtailed_energy"])
 
 
-def test_run_simulation_more_dac(sample_data: pd.DataFrame) -> None:
-    """Test simulation with more DAC capacity."""
-    # Increase DAC capacity
+def test_run_simulation_more_aggressive_dac(sample_data: pd.DataFrame) -> None:
+    """Test simulation with more aggressive DAC capacity."""
     model = PowerSystem(
         renewable_capacity=250 * U.GW,
         max_hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
         dac_capacity=A.DAC.Capacity,
-        only_dac_if_hydrogen_storage_full=False,  # Allow DAC operation when electrolyer capacity is exceeded
+        only_dac_if_hydrogen_storage_full=False,  # Allow DAC operation when electrolyser capacity is exceeded
     )
     net_supply_df = model.run_simulation(sample_data)
     results = model.analyze_simulation_results(net_supply_df)
