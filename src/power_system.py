@@ -19,7 +19,6 @@ class SimulationColumns(NamedTuple):
 
     medium_storage_level: str
     hydrogen_storage_level: str
-    residual_energy: str
     dac_energy: str
     curtailed_energy: str
     energy_into_medium_storage: str
@@ -34,7 +33,7 @@ class PowerSystem:
     Can be extended to include additional power system components and control strategies.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         renewable_capacity: int,
@@ -88,7 +87,7 @@ class PowerSystem:
         self.medium_storage_capacity = medium_storage_capacity.magnitude
         self.medium_storage_power = medium_storage_power.magnitude
         self.medium_storage_max_daily_energy = (medium_storage_power * A.HoursPerDay).to(U.TWh).magnitude
-        self.medium_storage_efficiency = A.MediumTermStorage.RoundTripEfficiency
+        self.medium_storage_efficiency = np.sqrt(A.MediumTermStorage.RoundTripEfficiency)  # Convert round-trip to single-direction efficiency
         self.initial_medium_storage_level = self.medium_storage_capacity  # Start with full storage
 
         # Set electrolyser parameters (store as magnitudes)
@@ -123,7 +122,6 @@ class PowerSystem:
         columns = SimulationColumns(
             medium_storage_level=f"medium_storage_level (TWh),RC={self.renewable_capacity}GW",
             hydrogen_storage_level=f"hydrogen_storage_level (TWh),RC={self.renewable_capacity}GW",
-            residual_energy=f"residual_energy (TWh),RC={self.renewable_capacity}GW",
             dac_energy=f"dac_energy (TWh),RC={self.renewable_capacity}GW",
             curtailed_energy=f"curtailed_energy (TWh),RC={self.renewable_capacity}GW",
             energy_into_medium_storage=f"energy_into_medium_storage (TWh),RC={self.renewable_capacity}GW",
@@ -158,11 +156,10 @@ class PowerSystem:
         # Assign results back to DataFrame with proper units
         df[columns.medium_storage_level] = pd.Series(results[:, 0], dtype="pint[TWh]")
         df[columns.hydrogen_storage_level] = pd.Series(results[:, 1], dtype="pint[TWh]")
-        df[columns.residual_energy] = pd.Series(results[:, 2], dtype="pint[TWh]")
-        df[columns.dac_energy] = pd.Series(results[:, 3], dtype="pint[TWh]")
-        df[columns.curtailed_energy] = pd.Series(results[:, 4], dtype="pint[TWh]")
-        df[columns.energy_into_medium_storage] = pd.Series(results[:, 5], dtype="pint[TWh]")
-        df[columns.energy_into_hydrogen_storage] = pd.Series(results[:, 6], dtype="pint[TWh]")
+        df[columns.dac_energy] = pd.Series(results[:, 2], dtype="pint[TWh]")
+        df[columns.curtailed_energy] = pd.Series(results[:, 3], dtype="pint[TWh]")
+        df[columns.energy_into_medium_storage] = pd.Series(results[:, 4], dtype="pint[TWh]")
+        df[columns.energy_into_hydrogen_storage] = pd.Series(results[:, 5], dtype="pint[TWh]")
 
         # === VALIDATE RESULTS ===
         self._validate_simulation_results(df, columns)
@@ -171,7 +168,6 @@ class PowerSystem:
 
     def _validate_simulation_results(self, df: pd.DataFrame, columns: SimulationColumns) -> None:
         """Validate simulation results to ensure physical constraints are met."""
-        assert (df[columns.residual_energy] >= 0).all(), "Residual energy cannot be negative"
         assert (df[columns.curtailed_energy] >= 0).all(), "Unused energy cannot be negative"
         assert (df[columns.hydrogen_storage_level] <= self.hydrogen_storage_capacity * U.TWh).all(), "Hydrogen storage cannot exceed maximum capacity"
         assert (df[columns.medium_storage_level] <= self.medium_storage_capacity * U.TWh).all(), "Medium storage cannot exceed maximum capacity"

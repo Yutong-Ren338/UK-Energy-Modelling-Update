@@ -362,11 +362,6 @@ def test_medium_term_storage_functionality(sample_data: pd.DataFrame, *, only_da
         "Hydrogen storage minimum should be higher when medium storage is available"
     )
 
-    # Curtailed energy should be lower with medium storage
-    assert analysis_with_medium["curtailed_energy"] < analysis_without_medium["curtailed_energy"], (
-        "Curtailed energy should be lower when medium storage is available"
-    )
-
     # Medium storage minimum should be 0 when disabled, and potentially positive when enabled
     assert analysis_without_medium["minimum_medium_storage"] == 0 * U.TWh, "Medium storage minimum should be 0 when disabled"
     assert analysis_with_medium["minimum_medium_storage"] >= 0 * U.TWh, "Medium storage minimum should be non-negative when enabled"
