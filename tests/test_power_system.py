@@ -93,7 +93,6 @@ def test_simulation_creates_expected_columns(power_system_model: PowerSystem, sa
     expected_columns = [
         "medium_storage_level (TWh),RC=250GW",
         "hydrogen_storage_level (TWh),RC=250GW",
-        "residual_energy (TWh),RC=250GW",
         "dac_energy (TWh),RC=250GW",
         "curtailed_energy (TWh),RC=250GW",
         "energy_into_medium_storage (TWh),RC=250GW",
@@ -121,12 +120,10 @@ def test_simulation_physical_constraints(power_system_model: PowerSystem, sample
         "Medium storage levels cannot exceed maximum capacity"
     )
 
-    # Check that residual energies are non-negative
-    residual_col = "residual_energy (TWh),RC=250GW"
+    # Check that energies are non-negative
     dac_col = "dac_energy (TWh),RC=250GW"
     unused_col = "curtailed_energy (TWh),RC=250GW"
 
-    assert (sim_df[residual_col] >= 0).all(), "Residual energy cannot be negative"
     assert (sim_df[dac_col] >= 0).all(), "DAC energy cannot be negative"
     assert (sim_df[unused_col] >= 0).all(), "Unused energy cannot be negative"
 
@@ -174,7 +171,6 @@ def test_simulation_with_custom_renewable_capacity(sample_data: pd.DataFrame) ->
     expected_columns = [
         "medium_storage_level (TWh),RC=450GW",
         "hydrogen_storage_level (TWh),RC=450GW",
-        "residual_energy (TWh),RC=450GW",
         "dac_energy (TWh),RC=450GW",
         "curtailed_energy (TWh),RC=450GW",
         "energy_into_medium_storage (TWh),RC=450GW",
