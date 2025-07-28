@@ -36,11 +36,11 @@
     - Maj looked at this already, found approx 14 GW capacity meeting on average 6% of demand per year
     - Can probably get these numbers from ESPENI dataset, and other sources
     - CB7 says 28 GW capacity by 2050
-- [ ] add dispatchable low carbon generation (gas + CCS)
+- [x] add dispatchable low carbon generation (gas + CCS)
     - Review CB7, FES 2025, and RS report assumptions
     - In CB7 it's about 18 GW (20 GW is cited for electrolyser and total low carbon dispatchable generation is 38 GW). They also emphasise that the exact tradeoff between gas and hydrogen generation is uncertain, and will depend on the evolution of costs and efficiencies.
 - [ ] move to hourly time resolution
-- [ ] Medium term storage (CB7): A range of other options can provide storage over the medium term (days-to-weeks), including pumped hydro and other technologies at different stages of commercialisation (for example, compressed and liquid air storage, flow batteries, and thermal storage). Our analysis deploys 7 GW of medium-duration grid storage by 2050, (433 GWh of storage capacity).
+- [x] Medium term storage (CB7): A range of other options can provide storage over the medium term (days-to-weeks), including pumped hydro and other technologies at different stages of commercialisation (for example, compressed and liquid air storage, flow batteries, and thermal storage). Our analysis deploys 7 GW of medium-duration grid storage by 2050, (433 GWh of storage capacity).
 - [x] use numba to speed up the core simulation loop
 - [ ] use multiprocessing for parallel runs
 - [ ] configurable simulation start storage levels (test 0, 50%, 100% full)
