@@ -22,13 +22,22 @@ SIMULATION_KWARGS = {
     "hydrogen_storage_capacity": A.HydrogenStorage.CavernStorage.MaxCapacity,  # Maximum hydrogen storage capacity
     "electrolyser_power": A.HydrogenStorage.Electrolysis.Power,  # Electrolyser power capacity
     "dac_capacity": A.DAC.Capacity,  # DAC capacity
+    "medium_storage_capacity": 0 * U.TWh,  # Disable medium storage for backward compatibility
+    "medium_storage_power": 0 * U.GW,  # Disable medium storage power for backward compatibility
 }
 
 
 @pytest.fixture
-def sample_data() -> pd.DataFrame:
+def sample_data_rei() -> pd.DataFrame:
     test_data_path = Path(__file__).parent / "rei_net_supply_df_12gw_nuclear.csv"
     return pd.read_csv(test_data_path)
+
+
+@pytest.fixture
+def sample_data() -> pd.DataFrame:
+    # Generate demand and supply data
+    demand_df = demand_model.predicted_demand(mode="cb7", average_year=False)
+    return supply_model.get_net_supply(demand_df).reset_index()
 
 
 @pytest.fixture
@@ -36,91 +45,103 @@ def power_system_model() -> PowerSystem:
     return PowerSystem(**SIMULATION_KWARGS)
 
 
-def test_run_simulation_with_expected_outputs(power_system_model: PowerSystem, sample_data: pd.DataFrame) -> None:
+def test_run_simulation_with_expected_outputs(power_system_model: PowerSystem, sample_data_rei: pd.DataFrame) -> None:
     # Run the simulation
-    net_supply_df = power_system_model.run_simulation(sample_data)
+    sim_df = power_system_model.run_simulation(sample_data_rei)
 
     # Analyze results
-    results = power_system_model.analyze_simulation_results(net_supply_df)
+    results = power_system_model.analyze_simulation_results(sim_df)
 
     # Check that the expected outputs match the documented values
     # (with some tolerance for floating point precision)
     expected_values = {
+        "minimum_medium_storage": 0.0 * U.TWh,  # Medium storage disabled for backward compatibility
         "minimum_hydrogen_storage": 20.16927245757229 * U.TWh,
         "annual_dac_energy": 38.47911516786211 * U.TWh,
         "dac_capacity_factor": 0.19,  # 19.0%
-        "curtailed_energy": 102.151937420628 * U.TWh,
+        "curtailed_energy": 76.0609621 * U.TWh,
     }
+    check(results["minimum_medium_storage"], expected_values["minimum_medium_storage"])
     check(results["minimum_hydrogen_storage"], expected_values["minimum_hydrogen_storage"])
     check(results["annual_dac_energy"], expected_values["annual_dac_energy"])
     check(results["dac_capacity_factor"], expected_values["dac_capacity_factor"])
     check(results["curtailed_energy"], expected_values["curtailed_energy"])
 
 
-def test_run_simulation_more_aggressive_dac(sample_data: pd.DataFrame) -> None:
+def test_run_simulation_more_aggressive_dac(sample_data_rei: pd.DataFrame) -> None:
     """Test simulation with more aggressive DAC capacity."""
     model = PowerSystem(
         renewable_capacity=250 * U.GW,
         hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
         dac_capacity=A.DAC.Capacity,
+        medium_storage_capacity=0 * U.TWh,  # Disable medium storage for backward compatibility
+        medium_storage_power=0 * U.GW,  # Disable medium storage power for backward compatibility
         only_dac_if_hydrogen_storage_full=False,  # Allow DAC operation when electrolyser capacity is exceeded
     )
-    net_supply_df = model.run_simulation(sample_data)
-    results = model.analyze_simulation_results(net_supply_df)
+    sim_df = model.run_simulation(sample_data_rei)
+    results = model.analyze_simulation_results(sim_df)
 
     # Check that results are reasonable with increased DAC capacity
     assert results["annual_dac_energy"] > 38.47911516786211 * U.TWh, "DAC energy should increase with more capacity"
 
 
-def test_simulation_creates_expected_columns(power_system_model: PowerSystem, sample_data: pd.DataFrame) -> None:
-    net_supply_df = power_system_model.run_simulation(sample_data)
+def test_simulation_creates_expected_columns(power_system_model: PowerSystem, sample_data_rei: pd.DataFrame) -> None:
+    sim_df = power_system_model.run_simulation(sample_data_rei)
 
     # Check that expected columns exist for 250GW renewable capacity
     expected_columns = [
+        "medium_storage_level (TWh),RC=250GW",
         "hydrogen_storage_level (TWh),RC=250GW",
-        "residual_energy (TWh),RC=250GW",
         "dac_energy (TWh),RC=250GW",
         "curtailed_energy (TWh),RC=250GW",
+        "energy_into_medium_storage (TWh),RC=250GW",
+        "energy_into_hydrogen_storage (TWh),RC=250GW",
     ]
 
     for col in expected_columns:
-        assert col in net_supply_df.columns, f"Expected column {col} not found"
+        assert col in sim_df.columns, f"Expected column {col} not found"
 
 
-def test_simulation_physical_constraints(power_system_model: PowerSystem, sample_data: pd.DataFrame) -> None:
-    net_supply_df = power_system_model.run_simulation(sample_data)
+def test_simulation_physical_constraints(power_system_model: PowerSystem, sample_data_rei: pd.DataFrame) -> None:
+    sim_df = power_system_model.run_simulation(sample_data_rei)
 
     # Check hydrogen storage level constraints
     hydrogen_storage_col = "hydrogen_storage_level (TWh),RC=250GW"
-    assert (net_supply_df[hydrogen_storage_col] >= 0).all(), "Hydrogen storage levels cannot be negative"
-    assert (net_supply_df[hydrogen_storage_col] <= power_system_model.hydrogen_storage_capacity * U.TWh).all(), (
+    assert (sim_df[hydrogen_storage_col] >= 0).all(), "Hydrogen storage levels cannot be negative"
+    assert (sim_df[hydrogen_storage_col] <= power_system_model.hydrogen_storage_capacity * U.TWh).all(), (
         "Hydrogen storage levels cannot exceed maximum capacity"
     )
 
-    # Check that residual energies are non-negative
-    residual_col = "residual_energy (TWh),RC=250GW"
+    # Check medium storage level constraints (should be 0 since disabled)
+    medium_storage_col = "medium_storage_level (TWh),RC=250GW"
+    assert (sim_df[medium_storage_col] >= 0).all(), "Medium storage levels cannot be negative"
+    assert (sim_df[medium_storage_col] <= power_system_model.medium_storage_capacity * U.TWh).all(), (
+        "Medium storage levels cannot exceed maximum capacity"
+    )
+
+    # Check that energies are non-negative
     dac_col = "dac_energy (TWh),RC=250GW"
     unused_col = "curtailed_energy (TWh),RC=250GW"
 
-    assert (net_supply_df[residual_col] >= 0).all(), "Residual energy cannot be negative"
-    assert (net_supply_df[dac_col] >= 0).all(), "DAC energy cannot be negative"
-    assert (net_supply_df[unused_col] >= 0).all(), "Unused energy cannot be negative"
+    assert (sim_df[dac_col] >= 0).all(), "DAC energy cannot be negative"
+    assert (sim_df[unused_col] >= 0).all(), "Unused energy cannot be negative"
 
     # Check DAC capacity constraint
-    assert (net_supply_df[dac_col] <= power_system_model.dac_max_daily_energy * U.TWh).all(), "DAC energy cannot exceed daily capacity"
+    assert (sim_df[dac_col] <= power_system_model.dac_max_daily_energy * U.TWh).all(), "DAC energy cannot exceed daily capacity"
 
 
-def test_analyze_simulation_results_structure(power_system_model: PowerSystem, sample_data: pd.DataFrame) -> None:
-    net_supply_df = power_system_model.run_simulation(sample_data)
-    results = power_system_model.analyze_simulation_results(net_supply_df)
+def test_analyze_simulation_results_structure(power_system_model: PowerSystem, sample_data_rei: pd.DataFrame) -> None:
+    sim_df = power_system_model.run_simulation(sample_data_rei)
+    results = power_system_model.analyze_simulation_results(sim_df)
 
     # Check that all expected keys are present
-    expected_keys = {"minimum_hydrogen_storage", "annual_dac_energy", "dac_capacity_factor", "curtailed_energy"}
+    expected_keys = {"minimum_medium_storage", "minimum_hydrogen_storage", "annual_dac_energy", "dac_capacity_factor", "curtailed_energy"}
 
     assert set(results.keys()) == expected_keys, "Results dictionary missing expected keys"
 
     # Check value types and ranges
+    assert isinstance(results["minimum_medium_storage"], Quantity)
     assert isinstance(results["minimum_hydrogen_storage"], Quantity)
     assert isinstance(results["annual_dac_energy"], Quantity)
     assert isinstance(results["dac_capacity_factor"], float)
@@ -133,30 +154,34 @@ def test_analyze_simulation_results_structure(power_system_model: PowerSystem, s
 def test_simulation_with_custom_renewable_capacity(sample_data: pd.DataFrame) -> None:
     # Test with different renewable capacities
     custom_model = PowerSystem(
-        renewable_capacity=300 * U.GW,
+        renewable_capacity=450 * U.GW,
         hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
         dac_capacity=A.DAC.Capacity,
+        medium_storage_capacity=0 * U.TWh,  # Disable medium storage for backward compatibility
+        medium_storage_power=0 * U.GW,  # Disable medium storage power for backward compatibility
     )
-    net_supply_df = custom_model.run_simulation(sample_data)
-    results = custom_model.analyze_simulation_results(net_supply_df)
+    sim_df = custom_model.run_simulation(sample_data)
+    results = custom_model.analyze_simulation_results(sim_df)
 
     assert results is not None
     assert isinstance(results, dict)
 
     # Test that the simulation creates the correct columns for custom capacity
     expected_columns = [
-        "hydrogen_storage_level (TWh),RC=300GW",
-        "residual_energy (TWh),RC=300GW",
-        "dac_energy (TWh),RC=300GW",
-        "curtailed_energy (TWh),RC=300GW",
+        "medium_storage_level (TWh),RC=450GW",
+        "hydrogen_storage_level (TWh),RC=450GW",
+        "dac_energy (TWh),RC=450GW",
+        "curtailed_energy (TWh),RC=450GW",
+        "energy_into_medium_storage (TWh),RC=450GW",
+        "energy_into_hydrogen_storage (TWh),RC=450GW",
     ]
     for col in expected_columns:
-        assert col in net_supply_df.columns, f"Expected column {col} not found"
+        assert col in sim_df.columns, f"Expected column {col} not found"
 
 
 def test_multiple_renewable_capacities(sample_data: pd.DataFrame) -> None:
-    capacities = [200, 250, 300]
+    capacities = [380, 390, 400]
     all_results = {}
 
     for capacity in capacities:
@@ -165,6 +190,8 @@ def test_multiple_renewable_capacities(sample_data: pd.DataFrame) -> None:
             hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
             electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
             dac_capacity=A.DAC.Capacity,
+            medium_storage_capacity=0 * U.TWh,  # Disable medium storage for backward compatibility
+            medium_storage_power=0 * U.GW,  # Disable medium storage power for backward compatibility
         )
         sim_df = model.run_simulation(sample_data)
         if sim_df is None:
@@ -173,6 +200,7 @@ def test_multiple_renewable_capacities(sample_data: pd.DataFrame) -> None:
         all_results[capacity] = results
 
         # Verify that each capacity produces valid results
+        assert results["minimum_medium_storage"] >= 0 * U.TWh
         assert results["minimum_hydrogen_storage"] >= 0 * U.TWh
         assert results["annual_dac_energy"] >= 0 * U.TWh
         assert 0 <= results["dac_capacity_factor"] <= 1
@@ -198,6 +226,8 @@ def test_plot_simulation_results(demand_mode: str) -> None:
         hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
         dac_capacity=A.DAC.Capacity,
+        medium_storage_capacity=0 * U.TWh,  # Disable medium storage for backward compatibility
+        medium_storage_power=0 * U.GW,  # Disable medium storage power for backward compatibility
     )
 
     # Run simulation
@@ -218,6 +248,7 @@ def test_plot_simulation_results(demand_mode: str) -> None:
     assert plot_filename.exists(), f"Plot file {plot_filename} was not created"
 
     # Verify results are reasonable
+    assert results["minimum_medium_storage"] >= 0 * U.TWh
     assert results["minimum_hydrogen_storage"] >= 0 * U.TWh
     assert results["annual_dac_energy"] >= 0 * U.TWh
     assert 0 <= results["dac_capacity_factor"] <= 1
@@ -249,6 +280,8 @@ def test_simulation_timing() -> None:
                     hydrogen_storage_capacity=storage * U.TWh,
                     electrolyser_power=electrolyser_power * U.GW,
                     dac_capacity=A.DAC.Capacity,
+                    medium_storage_capacity=0 * U.TWh,  # Disable medium storage for backward compatibility
+                    medium_storage_power=0 * U.GW,  # Disable medium storage power for backward compatibility
                 )
 
                 start_time = time.time()
@@ -274,3 +307,57 @@ def test_simulation_timing() -> None:
 
     assert mean_time < max_reasonable_time, f"Simulation taking too long: {mean_time:.2f} seconds on average"
     assert total_time < max_total_test_time, f"Total test time too long: {total_time:.2f} seconds"
+
+
+@pytest.mark.parametrize("only_dac_if_storage_full", [True, False])
+def test_medium_term_storage_functionality(sample_data: pd.DataFrame, *, only_dac_if_storage_full: bool) -> None:
+    """Test that medium-term storage works correctly when enabled."""
+    # Test with medium-term storage enabled
+    model_with_medium = PowerSystem(
+        renewable_capacity=400 * U.GW,
+        hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
+        electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
+        dac_capacity=A.DAC.Capacity,
+        only_dac_if_hydrogen_storage_full=only_dac_if_storage_full,
+        medium_storage_capacity=A.MediumTermStorage.Capacity,  # Enable medium storage
+        medium_storage_power=A.MediumTermStorage.Power,  # Enable medium storage power
+    )
+
+    # Test with medium-term storage disabled (baseline)
+    model_without_medium = PowerSystem(
+        renewable_capacity=400 * U.GW,
+        hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
+        electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
+        dac_capacity=A.DAC.Capacity,
+        only_dac_if_hydrogen_storage_full=only_dac_if_storage_full,
+        medium_storage_capacity=0 * U.TWh,  # Disable medium storage
+        medium_storage_power=0 * U.GW,  # Disable medium storage power
+    )
+
+    # Run simulations
+    results_with_medium = model_with_medium.run_simulation(sample_data)
+    results_without_medium = model_without_medium.run_simulation(sample_data)
+
+    # Both simulations should succeed
+    assert results_with_medium is not None, "Simulation with medium storage should not fail"
+    assert results_without_medium is not None, "Simulation without medium storage should not fail"
+
+    # Medium storage should be used when enabled
+    medium_storage_col = "medium_storage_level (TWh),RC=400GW"
+    assert (results_with_medium[medium_storage_col] >= 0).all(), "Medium storage levels should be non-negative"
+
+    # Medium storage should remain at 0 when disabled
+    assert (results_without_medium[medium_storage_col] == 0).all(), "Medium storage should be 0 when disabled"
+
+    # Analyze results
+    analysis_with_medium = model_with_medium.analyze_simulation_results(results_with_medium)
+    analysis_without_medium = model_without_medium.analyze_simulation_results(results_without_medium)
+
+    # With medium storage, hydrogen minimum should be higher (medium storage takes priority)
+    assert analysis_with_medium["minimum_hydrogen_storage"] >= analysis_without_medium["minimum_hydrogen_storage"], (
+        "Hydrogen storage minimum should be higher when medium storage is available"
+    )
+
+    # Medium storage minimum should be 0 when disabled, and potentially positive when enabled
+    assert analysis_without_medium["minimum_medium_storage"] == 0 * U.TWh, "Medium storage minimum should be 0 when disabled"
+    assert analysis_with_medium["minimum_medium_storage"] >= 0 * U.TWh, "Medium storage minimum should be non-negative when enabled"
