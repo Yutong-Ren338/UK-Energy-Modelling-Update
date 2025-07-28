@@ -38,6 +38,7 @@ uv run ruff format .
 
 ### Current Capabilities
 - ✅ Core power system simulation with storage
+- ✅ Long & medium-term power storage options
 - ✅ Multiple demand modeling approaches 
 - ✅ Renewable supply modeling with capacity factors
 - ✅ DAC integration for excess energy allocation
@@ -47,7 +48,6 @@ uv run ruff format .
 - 🔄 Hourly time resolution (currently daily)
 - 🔄 Interconnector modeling (28 GW capacity by 2050)
 - 🔄 Dispatchable low-carbon generation (gas + CCS)
-- 🔄 Medium-term storage options (pumped hydro, compressed air)
 - 🔄 Economic optimization and cost modeling
 
 See `todo.md` for detailed development roadmap.
