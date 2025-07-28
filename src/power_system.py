@@ -304,11 +304,6 @@ class PowerSystem:
             label="Hydrogen Storage",
         )
 
-        # Add reference lines
-        if self.hydrogen_storage_capacity > 0:
-            contingency_pct = (20 / self.hydrogen_storage_capacity) * 100
-            ax1.axhline(contingency_pct, linestyle="--", color="red", linewidth=1.5, label="Hydrogen Contingency")
-
         ax1.set_ylim(0, 110)
         ax1.set_ylabel("Storage Level (%)")
         ax1.legend(loc="upper right", fontsize=10, facecolor="white", edgecolor="gray", frameon=True, framealpha=0.9)
