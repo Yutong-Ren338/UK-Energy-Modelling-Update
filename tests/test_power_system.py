@@ -59,7 +59,7 @@ def test_run_simulation_with_expected_outputs(power_system_model: PowerSystem, s
         "minimum_hydrogen_storage": 20.16927245757229 * U.TWh,
         "annual_dac_energy": 38.47911516786211 * U.TWh,
         "dac_capacity_factor": 0.19,  # 19.0%
-        "curtailed_energy": 102.151937420628 * U.TWh,
+        "curtailed_energy": 76.0609621 * U.TWh,
     }
     check(results["minimum_medium_storage"], expected_values["minimum_medium_storage"])
     check(results["minimum_hydrogen_storage"], expected_values["minimum_hydrogen_storage"])

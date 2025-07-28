@@ -108,15 +108,12 @@ class PowerSystem:
             net_supply_df: DataFrame containing supply-demand data.
 
         Returns:
-            DataFrame with simulation results added as new columns, or None if
+            DataFrame with simulation results, or None if
             simulation failed (storage capacity insufficient to meet demand).
         """
-        # Create a copy to avoid modifying the original DataFrame
-        df = net_supply_df.copy()
-
         # Define column names for this renewable capacity scenario
         supply_demand_col = self.renewable_capacity
-        if supply_demand_col not in df.columns:
+        if supply_demand_col not in net_supply_df.columns:
             supply_demand_col = f"S-D(TWh),Ren={self.renewable_capacity}GW"
 
         columns = SimulationColumns(
@@ -129,7 +126,7 @@ class PowerSystem:
         )
 
         # Get supply-demand values as numpy array for faster processing
-        supply_demand_values = df[supply_demand_col].astype(float).to_numpy()
+        supply_demand_values = net_supply_df[supply_demand_col].astype(float).to_numpy()
 
         # Create simulation parameters
         params = SimulationParameters(
@@ -153,18 +150,23 @@ class PowerSystem:
         if np.isnan(results).any():
             return None
 
-        # Assign results back to DataFrame with proper units
-        df[columns.medium_storage_level] = pd.Series(results[:, 0], dtype="pint[TWh]")
-        df[columns.hydrogen_storage_level] = pd.Series(results[:, 1], dtype="pint[TWh]")
-        df[columns.dac_energy] = pd.Series(results[:, 2], dtype="pint[TWh]")
-        df[columns.curtailed_energy] = pd.Series(results[:, 3], dtype="pint[TWh]")
-        df[columns.energy_into_medium_storage] = pd.Series(results[:, 4], dtype="pint[TWh]")
-        df[columns.energy_into_hydrogen_storage] = pd.Series(results[:, 5], dtype="pint[TWh]")
+        # Create new results DataFrame with proper units
+        results_df = pd.DataFrame(
+            {
+                columns.medium_storage_level: pd.Series(results[:, 0], dtype="pint[TWh]"),
+                columns.hydrogen_storage_level: pd.Series(results[:, 1], dtype="pint[TWh]"),
+                columns.dac_energy: pd.Series(results[:, 2], dtype="pint[TWh]"),
+                columns.curtailed_energy: pd.Series(results[:, 3], dtype="pint[TWh]"),
+                columns.energy_into_medium_storage: pd.Series(results[:, 4], dtype="pint[TWh]"),
+                columns.energy_into_hydrogen_storage: pd.Series(results[:, 5], dtype="pint[TWh]"),
+            },
+            index=net_supply_df.index,
+        )
 
         # === VALIDATE RESULTS ===
-        self._validate_simulation_results(df, columns)
+        self._validate_simulation_results(results_df, columns)
 
-        return df
+        return results_df
 
     def _validate_simulation_results(self, df: pd.DataFrame, columns: SimulationColumns) -> None:
         """Validate simulation results to ensure physical constraints are met."""
@@ -324,4 +326,5 @@ class PowerSystem:
         ax3.text(0, 0.5, text, fontsize=11, verticalalignment="center", fontfamily="monospace")
 
         if fname:
+            fig.savefig(fname, bbox_inches="tight", dpi=300)
             fig.savefig(fname, bbox_inches="tight", dpi=300)
