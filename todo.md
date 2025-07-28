@@ -10,6 +10,12 @@
 - [x] look at CCC hourly demand data ([source](https://www.theccc.org.uk/wp-content/uploads/2025/05/The-Seventh-Carbon-Budget-methodology-accompanying-data-electricity-supply-hourly-results.xlsx))
     - [x] compare our demand model to CCC
 
+- [ ] check out additional datasets
+    - https://zenodo.org/records/13938926
+    - https://researchdata.reading.ac.uk/321/
+    - https://researchdata.reading.ac.uk/239/
+    
+
 ### Demand modelling
 
 - [ ] do better than averaging the gas demand (repeat it, or use a more sophisticated model)
