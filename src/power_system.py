@@ -327,4 +327,3 @@ class PowerSystem:
 
         if fname:
             fig.savefig(fname, bbox_inches="tight", dpi=300)
-            fig.savefig(fname, bbox_inches="tight", dpi=300)
