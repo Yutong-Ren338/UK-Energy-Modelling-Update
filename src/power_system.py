@@ -23,6 +23,7 @@ class SimulationColumns(NamedTuple):
     curtailed_energy: str
     energy_into_medium_storage: str
     energy_into_hydrogen_storage: str
+    gas_ccs_energy: str
 
 
 class PowerSystem:
@@ -42,6 +43,7 @@ class PowerSystem:
         dac_capacity: float,
         medium_storage_capacity: float | None = None,
         medium_storage_power: float | None = None,
+        gas_ccs_capacity: float | None = None,
         only_dac_if_hydrogen_storage_full: bool = True,
     ) -> None:
         """Initialize the power system model with required parameters.
@@ -53,6 +55,7 @@ class PowerSystem:
             dac_capacity: Direct Air Capture system capacity in GW.
             medium_storage_capacity: Maximum medium-term storage capacity in TWh. If None, uses default from assumptions.
             medium_storage_power: Medium-term storage power capacity in GW. If None, uses default from assumptions.
+            gas_ccs_capacity: Dispatchable gas CCS capacity in GW. If None, uses default from assumptions.
             only_dac_if_hydrogen_storage_full: Whether DAC only operates when hydrogen storage is full.
         """
         # check pint units before running
@@ -69,6 +72,12 @@ class PowerSystem:
 
         assert medium_storage_capacity.units == U.TWh, "Medium storage capacity must be in TWh"
         assert medium_storage_power.units == U.GW, "Medium storage power must be in GW"
+
+        # Set gas CCS parameters with defaults from assumptions
+        if gas_ccs_capacity is None:
+            gas_ccs_capacity = A.PowerSystem.DispatchableGasCCS
+
+        assert gas_ccs_capacity.units == U.GW, "Gas CCS capacity must be in GW"
 
         if medium_storage_capacity == 0:
             assert medium_storage_power == 0, "If medium storage capacity is zero, power must also be zero"
@@ -99,6 +108,10 @@ class PowerSystem:
         self.dac_max_daily_energy = (dac_capacity * A.HoursPerDay).to(U.TWh).magnitude
         self.only_dac_if_hydrogen_storage_full = only_dac_if_hydrogen_storage_full
 
+        # Set gas CCS parameters
+        self.gas_ccs_capacity = gas_ccs_capacity.magnitude
+        self.gas_ccs_max_daily_energy = (gas_ccs_capacity * A.HoursPerDay).to(U.TWh).magnitude
+
     def run_simulation(self, net_supply_df: pd.DataFrame) -> pd.DataFrame | None:
         """Run power system simulation for this renewable capacity scenario.
 
@@ -123,6 +136,7 @@ class PowerSystem:
             curtailed_energy=f"curtailed_energy (TWh),RC={self.renewable_capacity}GW",
             energy_into_medium_storage=f"energy_into_medium_storage (TWh),RC={self.renewable_capacity}GW",
             energy_into_hydrogen_storage=f"energy_into_hydrogen_storage (TWh),RC={self.renewable_capacity}GW",
+            gas_ccs_energy=f"gas_ccs_energy (TWh),RC={self.renewable_capacity}GW",
         )
 
         # Get supply-demand values as numpy array for faster processing
@@ -139,8 +153,9 @@ class PowerSystem:
             only_dac_if_hydrogen_storage_full=self.only_dac_if_hydrogen_storage_full,
             initial_medium_storage_level=self.initial_medium_storage_level,
             medium_storage_capacity=self.medium_storage_capacity,
-            medium_storage_power=self.medium_storage_max_daily_energy,
+            medium_storage_max_daily_energy=self.medium_storage_max_daily_energy,
             medium_storage_efficiency=self.medium_storage_efficiency,
+            gas_ccs_max_daily_energy=self.gas_ccs_max_daily_energy,
         )
 
         # Run the core simulation
@@ -159,6 +174,7 @@ class PowerSystem:
                 columns.curtailed_energy: pd.Series(results[:, 3], dtype="pint[TWh]"),
                 columns.energy_into_medium_storage: pd.Series(results[:, 4], dtype="pint[TWh]"),
                 columns.energy_into_hydrogen_storage: pd.Series(results[:, 5], dtype="pint[TWh]"),
+                columns.gas_ccs_energy: pd.Series(results[:, 6], dtype="pint[TWh]"),
             },
             index=net_supply_df.index,
         )
@@ -176,6 +192,8 @@ class PowerSystem:
         assert (df[columns.dac_energy] <= self.dac_max_daily_energy * U.TWh).all(), "DAC energy cannot exceed its maximum daily capacity"
         assert (df[columns.hydrogen_storage_level] >= 0).all(), "Hydrogen storage cannot be negative"
         assert (df[columns.medium_storage_level] >= 0).all(), "Medium storage cannot be negative"
+        assert (df[columns.gas_ccs_energy] >= 0).all(), "Gas CCS energy cannot be negative"
+        assert (df[columns.gas_ccs_energy] <= self.gas_ccs_max_daily_energy * U.TWh).all(), "Gas CCS energy cannot exceed its maximum daily capacity"
 
     def analyze_simulation_results(self, sim_df: pd.DataFrame) -> dict | None:
         """Analyze simulation results and return key metrics.
@@ -195,6 +213,7 @@ class PowerSystem:
         hydrogen_storage_column = f"hydrogen_storage_level (TWh),RC={int(self.renewable_capacity)}GW"
         dac_column = f"dac_energy (TWh),RC={int(self.renewable_capacity)}GW"
         unused_column = f"curtailed_energy (TWh),RC={int(self.renewable_capacity)}GW"
+        gas_ccs_column = f"gas_ccs_energy (TWh),RC={int(self.renewable_capacity)}GW"
 
         # Calculate key metrics
         minimum_medium_storage = sim_df[medium_storage_column].min()
@@ -203,6 +222,8 @@ class PowerSystem:
         # Calculate capacity factor as actual usage vs maximum possible daily energy
         dac_capacity_factor = (sim_df[dac_column] > 0).mean()  # Simplified calculation based on operating days
         curtailed_energy = sim_df[unused_column].mean() * 365
+        annual_gas_ccs_energy = sim_df[gas_ccs_column].mean() * 365
+        gas_ccs_capacity_factor = (sim_df[gas_ccs_column] > 0).mean()  # Simplified calculation based on operating days
 
         return {
             "minimum_medium_storage": minimum_medium_storage,
@@ -210,6 +231,8 @@ class PowerSystem:
             "annual_dac_energy": annual_dac_energy,
             "dac_capacity_factor": dac_capacity_factor,
             "curtailed_energy": curtailed_energy,
+            "annual_gas_ccs_energy": annual_gas_ccs_energy,
+            "gas_ccs_capacity_factor": gas_ccs_capacity_factor,
         }
 
     @staticmethod
@@ -220,6 +243,8 @@ class PowerSystem:
             f"minimum hydrogen storage is {results['minimum_hydrogen_storage']:.1f}\n"
             f"DAC energy is {results['annual_dac_energy']:.1f}\n"
             f"DAC Capacity Factor is {results['dac_capacity_factor']:.1%}\n"
+            f"Gas CCS energy is {results['annual_gas_ccs_energy']:.1f}\n"
+            f"Gas CCS Capacity Factor is {results['gas_ccs_capacity_factor']:.1%}\n"
             f"Curtailed energy is {results['curtailed_energy']:.1f}"
         )
 
@@ -295,11 +320,20 @@ class PowerSystem:
             sim_df[f"energy_into_hydrogen_storage (TWh),RC={self.renewable_capacity}GW"],
             color="green",
             linewidth=0.5,
-            label="Energy to Hydrogen Storage",
+            label="Hydrogen Storage",
         )
         ax2.plot(sim_df[f"dac_energy (TWh),RC={self.renewable_capacity}GW"], color="red", linewidth=0.5, label="DAC Energy")
         ax2.plot(
-            sim_df[f"energy_into_medium_storage (TWh),RC={self.renewable_capacity}GW"], color="blue", linewidth=0.5, label="Energy to Medium Storage"
+            sim_df[f"gas_ccs_energy (TWh),RC={self.renewable_capacity}GW"],
+            color="purple",
+            linewidth=0.5,
+            label="Gas CCS",
+        )
+        ax2.plot(
+            sim_df[f"energy_into_medium_storage (TWh),RC={self.renewable_capacity}GW"],
+            color="orange",
+            linewidth=0.5,
+            label="Medium Storage",
         )
         ax2.set_xlabel("Day in 40 Years")
         ax2.set_ylabel("Energy (TWh)")
@@ -313,13 +347,14 @@ class PowerSystem:
         text = (
             f"Parameters:\n"
             f"• Demand Mode: {demand_mode}\n"
-            f"• Renewable Capacity: {self.renewable_capacity:.0f} GW\n"
-            f"• Medium Storage Capacity: {self.medium_storage_capacity:.1f} TWh\n"
+            f"• Renewables: {self.renewable_capacity:.0f} GW\n"
+            f"• Medium Storage: {self.medium_storage_capacity:.1f} TWh\n"
             f"• Medium Storage Power: {self.medium_storage_power:.0f} GW\n"
-            f"• Hydrogen Storage Capacity: {self.hydrogen_storage_capacity:.0f} TWh\n"
-            f"• DAC Capacity: {self.dac_capacity:.0f} GW\n"
-            f"• Electrolyser Power: {self.electrolyser_power:.0f} GW\n\n"
-            f"Results:\n"
+            f"• Hydrogen Storage: {self.hydrogen_storage_capacity:.0f} TWh\n"
+            f"• Electrolyser Power: {self.electrolyser_power:.0f} GW\n"
+            f"• Gas CCS Power: {self.gas_ccs_capacity:.0f} GW\n"
+            f"• DAC: {self.dac_capacity:.0f} GW\n"
+            f"\nResults:\n"
             f"{self.format_simulation_results(results)}"
         )
 

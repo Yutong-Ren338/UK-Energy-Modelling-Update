@@ -25,8 +25,10 @@ class SimulationParameters(NamedTuple):
     # Medium term storage parameters
     initial_medium_storage_level: float
     medium_storage_capacity: float
-    medium_storage_power: float
+    medium_storage_max_daily_energy: float
     medium_storage_efficiency: float
+    # Gas CCS parameters
+    gas_ccs_max_daily_energy: float
 
 
 @numba.njit(cache=True)
@@ -34,33 +36,36 @@ def handle_deficit(
     net_supply: float,
     prev_medium_storage: float,
     prev_hydrogen_storage: float,
-    medium_storage_power: float,
+    medium_storage_max_daily_energy: float,
     medium_storage_efficiency: float,
     hydrogen_e_out: float,
-) -> tuple[float, float, bool]:
+    gas_ccs_max_daily_energy: float,
+) -> tuple[float, float, float, bool]:
     """Handle energy deficit scenario by drawing from storage.
 
-    Priority order: Medium-term storage first, then hydrogen storage.
+    Priority order: Medium-term storage first, then gas CCS, then hydrogen storage.
 
     Args:
         net_supply: Negative supply-demand value (deficit)
         prev_medium_storage: Previous medium-term storage level
         prev_hydrogen_storage: Previous hydrogen storage level
-        medium_storage_power: Maximum daily energy capacity for medium storage (power * 24h)
+        medium_storage_max_daily_energy: Maximum daily energy capacity for medium storage (power * 24h)
         medium_storage_efficiency: Medium-term storage round-trip efficiency
         hydrogen_e_out: Hydrogen storage output efficiency
+        gas_ccs_max_daily_energy: Maximum daily energy capacity for gas CCS
 
     Returns:
-        Tuple of (new_medium_storage_level, new_hydrogen_storage_level, simulation_failed)
+        Tuple of (new_medium_storage_level, new_hydrogen_storage_level, gas_ccs_energy, simulation_failed)
     """
     remaining_deficit = -net_supply
     medium_storage_level = prev_medium_storage
     hydrogen_storage_level = prev_hydrogen_storage
+    gas_ccs_energy = 0.0
 
     # First, try to meet deficit from medium-term storage
     if remaining_deficit > 0 and prev_medium_storage > 0:
         # Available energy from medium storage (considering efficiency and power constraints)
-        available_from_medium = min(prev_medium_storage * medium_storage_efficiency, medium_storage_power)
+        available_from_medium = min(prev_medium_storage * medium_storage_efficiency, medium_storage_max_daily_energy)
         energy_from_medium = min(remaining_deficit, available_from_medium)
 
         # Update medium storage level (accounting for efficiency)
@@ -73,13 +78,18 @@ def handle_deficit(
 
         remaining_deficit -= energy_from_medium
 
-    # If deficit remains, use hydrogen storage
+    # Second, try to meet remaining deficit from gas CCS
+    if remaining_deficit > 0:
+        gas_ccs_energy = min(remaining_deficit, gas_ccs_max_daily_energy)
+        remaining_deficit -= gas_ccs_energy
+
+    # If deficit still remains, use hydrogen storage
     if remaining_deficit > 0 and prev_hydrogen_storage > 0:
         available_from_hydrogen = prev_hydrogen_storage * hydrogen_e_out
 
         if remaining_deficit > available_from_hydrogen:
             # Not enough total storage to meet demand - simulation failed
-            return 0.0, 0.0, True
+            return 0.0, 0.0, 0.0, True
 
         # Draw from hydrogen storage
         energy_drawn_from_hydrogen = remaining_deficit / hydrogen_e_out
@@ -89,9 +99,9 @@ def handle_deficit(
     # Check if deficit was fully met
     if remaining_deficit > 0:
         # Not enough storage to meet demand - simulation failed
-        return 0.0, 0.0, True
+        return 0.0, 0.0, 0.0, True
 
-    return medium_storage_level, hydrogen_storage_level, False
+    return medium_storage_level, hydrogen_storage_level, gas_ccs_energy, False
 
 
 @numba.njit(cache=True)
@@ -133,7 +143,7 @@ def handle_surplus(
     prev_hydrogen_storage: float,
     max_medium_storage: float,
     max_hydrogen_storage: float,
-    medium_storage_power: float,
+    medium_storage_max_daily_energy: float,
     medium_storage_efficiency: float,
     max_electrolyser: float,
     hydrogen_e_in: float,
@@ -151,7 +161,7 @@ def handle_surplus(
         prev_hydrogen_storage: Previous hydrogen storage level
         max_medium_storage: Maximum medium-term storage capacity
         max_hydrogen_storage: Maximum hydrogen storage capacity
-        medium_storage_power: Maximum daily energy for medium storage (power * 24h)
+        medium_storage_max_daily_energy: Maximum daily energy for medium storage (power * 24h)
         medium_storage_efficiency: Medium-term storage round-trip efficiency
         max_electrolyser: Maximum electrolyser daily energy capacity
         hydrogen_e_in: Hydrogen storage input efficiency
@@ -172,7 +182,7 @@ def handle_surplus(
         available_medium_capacity = max_medium_storage - prev_medium_storage
 
         # Consider both power constraint and capacity constraint
-        energy_into_medium_storage = min(remaining_energy, medium_storage_power, available_medium_capacity / medium_storage_efficiency)
+        energy_into_medium_storage = min(remaining_energy, medium_storage_max_daily_energy, available_medium_capacity / medium_storage_efficiency)
 
         if energy_into_medium_storage > 0:
             # Account for storage efficiency
@@ -214,13 +224,13 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
         params: Simulation parameters
 
     Returns:
-        Array of shape (n_timesteps, 6) containing:
+        Array of shape (n_timesteps, 7) containing:
         [medium_storage_level, hydrogen_storage_level, dac_energy,
-         curtailed_energy, energy_into_medium_storage, energy_into_hydrogen_storage]
+         curtailed_energy, energy_into_medium_storage, energy_into_hydrogen_storage, gas_ccs_energy]
         Returns array filled with NaN values if simulation fails (storage hits zero).
     """
     n_timesteps = len(net_supply_values)
-    results = np.zeros((n_timesteps, 6))
+    results = np.zeros((n_timesteps, 7))  # Expanded to include gas CCS energy
 
     # Extract ALL parameters to local variables
     max_hydrogen_storage = params.hydrogen_storage_capacity
@@ -232,8 +242,11 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
 
     # Medium-term storage parameters
     max_medium_storage = params.medium_storage_capacity
-    medium_storage_power = params.medium_storage_power
+    medium_storage_max_daily_energy = params.medium_storage_max_daily_energy
     medium_storage_efficiency = params.medium_storage_efficiency
+
+    # Gas CCS parameters
+    gas_ccs_max_daily_energy = params.gas_ccs_max_daily_energy
 
     prev_medium_storage = params.initial_medium_storage_level
     prev_hydrogen_storage = params.initial_hydrogen_storage_level
@@ -243,8 +256,14 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
 
         if net_supply <= 0:
             # Energy shortage - draw from storage
-            medium_storage_level, hydrogen_storage_level, simulation_failed = handle_deficit(
-                net_supply, prev_medium_storage, prev_hydrogen_storage, medium_storage_power, medium_storage_efficiency, hydrogen_e_out
+            medium_storage_level, hydrogen_storage_level, gas_ccs_energy, simulation_failed = handle_deficit(
+                net_supply,
+                prev_medium_storage,
+                prev_hydrogen_storage,
+                medium_storage_max_daily_energy,
+                medium_storage_efficiency,
+                hydrogen_e_out,
+                gas_ccs_max_daily_energy,
             )
             if simulation_failed:
                 results[:] = np.nan
@@ -268,7 +287,7 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
                 prev_hydrogen_storage,
                 max_medium_storage,
                 max_hydrogen_storage,
-                medium_storage_power,
+                medium_storage_max_daily_energy,
                 medium_storage_efficiency,
                 max_electrolyser,
                 hydrogen_e_in,
@@ -283,6 +302,9 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
                 only_dac_if_storage_full,
             )
 
+            # Surplus scenario - gas CCS energy is zero
+            gas_ccs_energy = 0.0
+
         # Direct array assignment is faster than list creation
         results[i, 0] = medium_storage_level
         results[i, 1] = hydrogen_storage_level
@@ -290,6 +312,7 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
         results[i, 3] = curtailed_energy
         results[i, 4] = energy_into_medium_storage
         results[i, 5] = energy_into_hydrogen_storage
+        results[i, 6] = gas_ccs_energy
 
         prev_medium_storage = medium_storage_level
         prev_hydrogen_storage = hydrogen_storage_level

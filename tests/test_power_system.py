@@ -19,11 +19,12 @@ OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 
 SIMULATION_KWARGS = {
     "renewable_capacity": 250 * U.GW,  # Default renewable capacity for the simulation
-    "hydrogen_storage_capacity": A.HydrogenStorage.CavernStorage.MaxCapacity,  # Maximum hydrogen storage capacity
-    "electrolyser_power": A.HydrogenStorage.Electrolysis.Power,  # Electrolyser power capacity
+    "hydrogen_storage_capacity": 71 * U.TWh,  # Maximum hydrogen storage capacity
+    "electrolyser_power": 50 * U.GW,  # Electrolyser power capacity
     "dac_capacity": A.DAC.Capacity,  # DAC capacity
     "medium_storage_capacity": 0 * U.TWh,  # Disable medium storage for backward compatibility
     "medium_storage_power": 0 * U.GW,  # Disable medium storage power for backward compatibility
+    "gas_ccs_capacity": 0 * U.GW,  # Disable gas CCS for backward compatibility
 }
 
 
@@ -60,23 +61,28 @@ def test_run_simulation_with_expected_outputs(power_system_model: PowerSystem, s
         "annual_dac_energy": 38.47911516786211 * U.TWh,
         "dac_capacity_factor": 0.19,  # 19.0%
         "curtailed_energy": 76.0609621 * U.TWh,
+        "annual_gas_ccs_energy": 0.0 * U.TWh,  # Gas CCS disabled for backward compatibility
+        "gas_ccs_capacity_factor": 0.0,  # Gas CCS disabled
     }
     check(results["minimum_medium_storage"], expected_values["minimum_medium_storage"])
     check(results["minimum_hydrogen_storage"], expected_values["minimum_hydrogen_storage"])
     check(results["annual_dac_energy"], expected_values["annual_dac_energy"])
     check(results["dac_capacity_factor"], expected_values["dac_capacity_factor"])
     check(results["curtailed_energy"], expected_values["curtailed_energy"])
+    check(results["annual_gas_ccs_energy"], expected_values["annual_gas_ccs_energy"])
+    check(results["gas_ccs_capacity_factor"], expected_values["gas_ccs_capacity_factor"])
 
 
 def test_run_simulation_more_aggressive_dac(sample_data_rei: pd.DataFrame) -> None:
     """Test simulation with more aggressive DAC capacity."""
     model = PowerSystem(
         renewable_capacity=250 * U.GW,
-        hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
-        electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
+        hydrogen_storage_capacity=71 * U.TWh,
+        electrolyser_power=50 * U.GW,
         dac_capacity=A.DAC.Capacity,
         medium_storage_capacity=0 * U.TWh,  # Disable medium storage for backward compatibility
         medium_storage_power=0 * U.GW,  # Disable medium storage power for backward compatibility
+        gas_ccs_capacity=0 * U.GW,  # Disable gas CCS for backward compatibility
         only_dac_if_hydrogen_storage_full=False,  # Allow DAC operation when electrolyser capacity is exceeded
     )
     sim_df = model.run_simulation(sample_data_rei)
@@ -97,6 +103,7 @@ def test_simulation_creates_expected_columns(power_system_model: PowerSystem, sa
         "curtailed_energy (TWh),RC=250GW",
         "energy_into_medium_storage (TWh),RC=250GW",
         "energy_into_hydrogen_storage (TWh),RC=250GW",
+        "gas_ccs_energy (TWh),RC=250GW",
     ]
 
     for col in expected_columns:
@@ -136,7 +143,15 @@ def test_analyze_simulation_results_structure(power_system_model: PowerSystem, s
     results = power_system_model.analyze_simulation_results(sim_df)
 
     # Check that all expected keys are present
-    expected_keys = {"minimum_medium_storage", "minimum_hydrogen_storage", "annual_dac_energy", "dac_capacity_factor", "curtailed_energy"}
+    expected_keys = {
+        "minimum_medium_storage",
+        "minimum_hydrogen_storage",
+        "annual_dac_energy",
+        "dac_capacity_factor",
+        "curtailed_energy",
+        "annual_gas_ccs_energy",
+        "gas_ccs_capacity_factor",
+    }
 
     assert set(results.keys()) == expected_keys, "Results dictionary missing expected keys"
 
@@ -146,16 +161,19 @@ def test_analyze_simulation_results_structure(power_system_model: PowerSystem, s
     assert isinstance(results["annual_dac_energy"], Quantity)
     assert isinstance(results["dac_capacity_factor"], float)
     assert isinstance(results["curtailed_energy"], Quantity)
+    assert isinstance(results["annual_gas_ccs_energy"], Quantity)
+    assert isinstance(results["gas_ccs_capacity_factor"], float)
 
     # Check capacity factor is a valid percentage
     assert 0 <= results["dac_capacity_factor"] <= 1, "DAC capacity factor should be between 0 and 1"
+    assert 0 <= results["gas_ccs_capacity_factor"] <= 1, "Gas CCS capacity factor should be between 0 and 1"
 
 
 def test_simulation_with_custom_renewable_capacity(sample_data: pd.DataFrame) -> None:
     # Test with different renewable capacities
     custom_model = PowerSystem(
         renewable_capacity=450 * U.GW,
-        hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
+        hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.Capacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
         dac_capacity=A.DAC.Capacity,
         medium_storage_capacity=0 * U.TWh,  # Disable medium storage for backward compatibility
@@ -187,7 +205,7 @@ def test_multiple_renewable_capacities(sample_data: pd.DataFrame) -> None:
     for capacity in capacities:
         model = PowerSystem(
             renewable_capacity=capacity * U.GW,
-            hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
+            hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.Capacity,
             electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
             dac_capacity=A.DAC.Capacity,
             medium_storage_capacity=0 * U.TWh,  # Disable medium storage for backward compatibility
@@ -223,7 +241,7 @@ def test_plot_simulation_results(demand_mode: str) -> None:
     # Create power system model
     storage = PowerSystem(
         renewable_capacity=renewable_capacity * U.GW,
-        hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
+        hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.Capacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
         dac_capacity=A.DAC.Capacity,
         medium_storage_capacity=0 * U.TWh,  # Disable medium storage for backward compatibility
@@ -315,7 +333,7 @@ def test_medium_term_storage_functionality(sample_data: pd.DataFrame, *, only_da
     # Test with medium-term storage enabled
     model_with_medium = PowerSystem(
         renewable_capacity=400 * U.GW,
-        hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
+        hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.Capacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
         dac_capacity=A.DAC.Capacity,
         only_dac_if_hydrogen_storage_full=only_dac_if_storage_full,
@@ -326,7 +344,7 @@ def test_medium_term_storage_functionality(sample_data: pd.DataFrame, *, only_da
     # Test with medium-term storage disabled (baseline)
     model_without_medium = PowerSystem(
         renewable_capacity=400 * U.GW,
-        hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.MaxCapacity,
+        hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.Capacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
         dac_capacity=A.DAC.Capacity,
         only_dac_if_hydrogen_storage_full=only_dac_if_storage_full,
