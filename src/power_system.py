@@ -41,6 +41,7 @@ class PowerSystem:
         hydrogen_storage_capacity: float,
         electrolyser_power: float,
         dac_capacity: float,
+        hydrogen_generation_power: float | None = None,
         medium_storage_capacity: float | None = None,
         medium_storage_power: float | None = None,
         gas_ccs_capacity: float | None = None,
@@ -53,6 +54,7 @@ class PowerSystem:
             hydrogen_storage_capacity: Maximum hydrogen energy storage capacity in TWh.
             electrolyser_power: Power capacity for energy conversion to hydrogen storage in GW.
             dac_capacity: Direct Air Capture system capacity in GW.
+            hydrogen_generation_power: Power capacity for generating electricity from hydrogen in GW. If None, uses default from assumptions.
             medium_storage_capacity: Maximum medium-term storage capacity in TWh. If None, uses default from assumptions.
             medium_storage_power: Medium-term storage power capacity in GW. If None, uses default from assumptions.
             gas_ccs_capacity: Dispatchable gas CCS capacity in GW. If None, uses default from assumptions.
@@ -63,6 +65,10 @@ class PowerSystem:
         assert hydrogen_storage_capacity.units == U.TWh, "Max hydrogen storage capacity must be in TWh"
         assert electrolyser_power.units == U.GW, "Electrolyser power must be in GW"
         assert dac_capacity.units == U.GW, "DAC capacity must be in GW"
+
+        if hydrogen_generation_power is None:
+            hydrogen_generation_power = A.HydrogenStorage.Generation.Power
+        assert hydrogen_generation_power.units == U.GW, "Hydrogen generation power must be in GW"
 
         # Set medium-term storage parameters with defaults from assumptions
         if medium_storage_capacity is None:
@@ -91,6 +97,10 @@ class PowerSystem:
         # Set hydrogen storage parameters (store as magnitudes)
         self.hydrogen_storage_capacity = hydrogen_storage_capacity.magnitude
         self.initial_hydrogen_storage_level = self.hydrogen_storage_capacity  # Start with full storage
+
+        # Set hydrogen generation parameters
+        self.hydrogen_generation_power = hydrogen_generation_power.magnitude
+        self.hydrogen_generation_max_daily_energy = (hydrogen_generation_power * A.HoursPerDay).to(U.TWh).magnitude
 
         # Set medium-term storage parameters (store as magnitudes)
         self.medium_storage_capacity = medium_storage_capacity.magnitude
@@ -147,6 +157,7 @@ class PowerSystem:
             initial_hydrogen_storage_level=self.initial_hydrogen_storage_level,
             hydrogen_storage_capacity=self.hydrogen_storage_capacity,
             electrolyser_max_daily_energy=self.electrolyser_max_daily_energy,
+            hydrogen_generation_max_daily_energy=self.hydrogen_generation_max_daily_energy,
             dac_max_daily_energy=self.dac_max_daily_energy,
             hydrogen_e_in=self.hydrogen_e_in,
             hydrogen_e_out=self.hydrogen_e_out,

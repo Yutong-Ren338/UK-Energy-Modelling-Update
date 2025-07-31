@@ -50,7 +50,7 @@
 - [x] use numba to speed up the core simulation loop
 - [ ] use multiprocessing for parallel runs
 - [ ] configurable simulation start storage levels (test 0, 50%, 100% full)
-- [ ] add a limit to hydrogen burning power?
+- [x] add a limit to hydrogen burning power
 
 ### Economic modelling
 

@@ -21,6 +21,9 @@ SIMULATION_KWARGS = {
     "renewable_capacity": 250 * U.GW,  # Default renewable capacity for the simulation
     "hydrogen_storage_capacity": 71 * U.TWh,  # Maximum hydrogen storage capacity
     "electrolyser_power": 50 * U.GW,  # Electrolyser power capacity
+    # To maintain backward compatibility for this regression test, set a very high generation power
+    # to simulate the old behavior of no power limit on drawing from hydrogen storage.
+    "hydrogen_generation_power": 9999 * U.GW,
     "dac_capacity": A.DAC.Capacity,  # DAC capacity
     "medium_storage_capacity": 0 * U.TWh,  # Disable medium storage for backward compatibility
     "medium_storage_power": 0 * U.GW,  # Disable medium storage power for backward compatibility
@@ -76,9 +79,10 @@ def test_run_simulation_with_expected_outputs(power_system_model: PowerSystem, s
 def test_run_simulation_more_aggressive_dac(sample_data_rei: pd.DataFrame) -> None:
     """Test simulation with more aggressive DAC capacity."""
     model = PowerSystem(
-        renewable_capacity=250 * U.GW,
+        renewable_capacity=300 * U.GW,
         hydrogen_storage_capacity=71 * U.TWh,
         electrolyser_power=50 * U.GW,
+        hydrogen_generation_power=A.HydrogenStorage.Generation.Power,
         dac_capacity=A.DAC.Capacity,
         medium_storage_capacity=0 * U.TWh,  # Disable medium storage for backward compatibility
         medium_storage_power=0 * U.GW,  # Disable medium storage power for backward compatibility
@@ -175,9 +179,8 @@ def test_simulation_with_custom_renewable_capacity(sample_data: pd.DataFrame) ->
         renewable_capacity=450 * U.GW,
         hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.Capacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
+        hydrogen_generation_power=A.HydrogenStorage.Generation.Power,
         dac_capacity=A.DAC.Capacity,
-        medium_storage_capacity=0 * U.TWh,  # Disable medium storage for backward compatibility
-        medium_storage_power=0 * U.GW,  # Disable medium storage power for backward compatibility
     )
     sim_df = custom_model.run_simulation(sample_data)
     results = custom_model.analyze_simulation_results(sim_df)
@@ -207,6 +210,7 @@ def test_multiple_renewable_capacities(sample_data: pd.DataFrame) -> None:
             renewable_capacity=capacity * U.GW,
             hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.Capacity,
             electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
+            hydrogen_generation_power=A.HydrogenStorage.Generation.Power,
             dac_capacity=A.DAC.Capacity,
             medium_storage_capacity=0 * U.TWh,  # Disable medium storage for backward compatibility
             medium_storage_power=0 * U.GW,  # Disable medium storage power for backward compatibility
@@ -243,6 +247,7 @@ def test_plot_simulation_results(demand_mode: str) -> None:
         renewable_capacity=renewable_capacity * U.GW,
         hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.Capacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
+        hydrogen_generation_power=A.HydrogenStorage.Generation.Power,
         dac_capacity=A.DAC.Capacity,
         medium_storage_capacity=0 * U.TWh,  # Disable medium storage for backward compatibility
         medium_storage_power=0 * U.GW,  # Disable medium storage power for backward compatibility
@@ -297,6 +302,7 @@ def test_simulation_timing() -> None:
                     renewable_capacity=renewable_capacity * U.GW,
                     hydrogen_storage_capacity=storage * U.TWh,
                     electrolyser_power=electrolyser_power * U.GW,
+                    hydrogen_generation_power=A.HydrogenStorage.Generation.Power,
                     dac_capacity=A.DAC.Capacity,
                     medium_storage_capacity=0 * U.TWh,  # Disable medium storage for backward compatibility
                     medium_storage_power=0 * U.GW,  # Disable medium storage power for backward compatibility
@@ -335,6 +341,7 @@ def test_medium_term_storage_functionality(sample_data: pd.DataFrame, *, only_da
         renewable_capacity=400 * U.GW,
         hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.Capacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
+        hydrogen_generation_power=A.HydrogenStorage.Generation.Power,
         dac_capacity=A.DAC.Capacity,
         only_dac_if_hydrogen_storage_full=only_dac_if_storage_full,
         medium_storage_capacity=A.MediumTermStorage.Capacity,  # Enable medium storage
@@ -346,6 +353,7 @@ def test_medium_term_storage_functionality(sample_data: pd.DataFrame, *, only_da
         renewable_capacity=400 * U.GW,
         hydrogen_storage_capacity=A.HydrogenStorage.CavernStorage.Capacity,
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
+        hydrogen_generation_power=A.HydrogenStorage.Generation.Power,
         dac_capacity=A.DAC.Capacity,
         only_dac_if_hydrogen_storage_full=only_dac_if_storage_full,
         medium_storage_capacity=0 * U.TWh,  # Disable medium storage

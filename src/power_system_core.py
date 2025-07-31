@@ -18,6 +18,7 @@ class SimulationParameters(NamedTuple):
     initial_hydrogen_storage_level: float
     hydrogen_storage_capacity: float
     electrolyser_max_daily_energy: float
+    hydrogen_generation_max_daily_energy: float
     dac_max_daily_energy: float
     hydrogen_e_in: float
     hydrogen_e_out: float
@@ -39,6 +40,7 @@ def handle_deficit(
     medium_storage_max_daily_energy: float,
     medium_storage_efficiency: float,
     hydrogen_e_out: float,
+    hydrogen_generation_max_daily_energy: float,
     gas_ccs_max_daily_energy: float,
 ) -> tuple[float, float, float, bool]:
     """Handle energy deficit scenario by drawing from storage.
@@ -52,6 +54,7 @@ def handle_deficit(
         medium_storage_max_daily_energy: Maximum daily energy capacity for medium storage (power * 24h)
         medium_storage_efficiency: Medium-term storage round-trip efficiency
         hydrogen_e_out: Hydrogen storage output efficiency
+        hydrogen_generation_max_daily_energy: Maximum daily energy that can be generated from hydrogen.
         gas_ccs_max_daily_energy: Maximum daily energy capacity for gas CCS
 
     Returns:
@@ -85,16 +88,17 @@ def handle_deficit(
 
     # If deficit still remains, use hydrogen storage
     if remaining_deficit > 0 and prev_hydrogen_storage > 0:
-        available_from_hydrogen = prev_hydrogen_storage * hydrogen_e_out
-
-        if remaining_deficit > available_from_hydrogen:
-            # Not enough total storage to meet demand - simulation failed
-            return 0.0, 0.0, 0.0, True
+        # Available energy from hydrogen (considering efficiency and power constraints)
+        available_from_hydrogen = min(prev_hydrogen_storage * hydrogen_e_out, hydrogen_generation_max_daily_energy)
+        energy_from_hydrogen = min(remaining_deficit, available_from_hydrogen)
 
         # Draw from hydrogen storage
-        energy_drawn_from_hydrogen = remaining_deficit / hydrogen_e_out
+        energy_drawn_from_hydrogen = energy_from_hydrogen / hydrogen_e_out
         hydrogen_storage_level = prev_hydrogen_storage - energy_drawn_from_hydrogen
-        remaining_deficit = 0.0
+        if hydrogen_storage_level < 0 and hydrogen_storage_level > -FLOATING_POINT_TOLERANCE:
+            hydrogen_storage_level = 0.0
+
+        remaining_deficit -= energy_from_hydrogen
 
     # Check if deficit was fully met
     if remaining_deficit > 0:
@@ -235,6 +239,7 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
     # Extract ALL parameters to local variables
     max_hydrogen_storage = params.hydrogen_storage_capacity
     max_electrolyser = params.electrolyser_max_daily_energy
+    hydrogen_generation_max_daily_energy = params.hydrogen_generation_max_daily_energy
     max_dac = params.dac_max_daily_energy
     hydrogen_e_in = params.hydrogen_e_in
     hydrogen_e_out = params.hydrogen_e_out
@@ -263,6 +268,7 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
                 medium_storage_max_daily_energy,
                 medium_storage_efficiency,
                 hydrogen_e_out,
+                hydrogen_generation_max_daily_energy,
                 gas_ccs_max_daily_energy,
             )
             if simulation_failed:

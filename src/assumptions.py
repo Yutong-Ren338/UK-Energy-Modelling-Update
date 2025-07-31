@@ -174,6 +174,7 @@ class HydrogenStorage:
     class Generation:
         """Parameters for electricity generation from stored hydrogen."""
 
+        Power = 100 * U.GW
         Efficiency = 0.55  # Converting stored hydrogen back to electricity
         Capex = 425 / GBPToUSD * U.GBP / U.kW
         Opex = Capex * 0.015
