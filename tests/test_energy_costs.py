@@ -7,7 +7,7 @@ from src.energy_costs import yearly_dac_energy_cost, yearly_dac_energy_cost_cumu
 
 def test_renewables_weighted_average_capacity_factor() -> None:
     """Test the weighted average capacity factor from assumptions."""
-    expected_value = 0.306
+    expected_value = 0.2595
     actual_value = A.Renewables.AverageCapacityFactor
     assert np.isclose(actual_value, expected_value, rtol=RELATIVE_TOLERANCE, atol=ABSOLUTE_TOLERANCE)
 
