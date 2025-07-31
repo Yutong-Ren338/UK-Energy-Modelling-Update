@@ -14,6 +14,8 @@
     - https://zenodo.org/records/13938926
     - https://researchdata.reading.ac.uk/321/
     - https://researchdata.reading.ac.uk/239/
+    - https://tyndp.entsoe.eu/resources/demand-time-series-2040-national-trends
+
     
 
 ### Demand modelling
@@ -42,15 +44,16 @@
     - Maj looked at this already, found approx 14 GW capacity meeting on average 6% of demand per year
     - Can probably get these numbers from ESPENI dataset, and other sources
     - CB7 says 28 GW capacity by 2050
+    - do it yourself: use ERA5, renewables.ninja. Determine when europe as a whole has excess generation (either looking at capacity factors alone or some kind of net supply demand balance). If there is a strong excess, then allow full interconnector capacity to come online. 
 - [x] add dispatchable low carbon generation (gas + CCS)
     - Review CB7, FES 2025, and RS report assumptions
     - In CB7 it's about 18 GW (20 GW is cited for electrolyser and total low carbon dispatchable generation is 38 GW). They also emphasise that the exact tradeoff between gas and hydrogen generation is uncertain, and will depend on the evolution of costs and efficiencies.
-- [ ] move to hourly time resolution
 - [x] Medium term storage (CB7): A range of other options can provide storage over the medium term (days-to-weeks), including pumped hydro and other technologies at different stages of commercialisation (for example, compressed and liquid air storage, flow batteries, and thermal storage). Our analysis deploys 7 GW of medium-duration grid storage by 2050, (433 GWh of storage capacity).
 - [x] use numba to speed up the core simulation loop
 - [ ] use multiprocessing for parallel runs
 - [ ] configurable simulation start storage levels (test 0, 50%, 100% full)
 - [x] add a limit to hydrogen burning power
+- [ ] move to hourly time resolution
 
 ### Economic modelling
 
