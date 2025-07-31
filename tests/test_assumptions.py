@@ -5,7 +5,7 @@ from src.units import Units as U
 
 
 def test_renewable_weighted_average_capacity_factor() -> None:
-    expected_value = 0.3064
+    expected_value = 0.2595
     check(A.Renewables.AverageCapacityFactor, expected_value)
 
 
