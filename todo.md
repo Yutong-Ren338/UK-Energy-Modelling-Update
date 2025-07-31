@@ -26,7 +26,7 @@
 
 ### Supply modelling
 
-- [ ] Check wind/solar mix from CB7 and FES (or try optimising ourselves)
+- [x] Check wind/solar mix from CB7 and FES (or try optimising ourselves)
 - [ ] Granular supply model using renewables ninja
 
 

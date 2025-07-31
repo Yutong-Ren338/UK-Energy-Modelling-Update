@@ -59,14 +59,21 @@ class Renewables:
     """Parameters for renewable energy technologies including solar, offshore wind, and onshore wind."""
 
     class CapacityRatios:
-        """Mix ratios for different renewable technologies in the energy portfolio."""
+        """Mix ratios for different renewable technologies in the energy portfolio.
 
-        Solar = 0.2
-        OffshoreWind = 0.56
-        OnshoreWind = 0.24
+        Source: CB7 Table 7.5.1
+        """
+
+        Solar = 0.4
+        OffshoreWind = 0.45
+        OnshoreWind = 0.15
 
     class CapacityFactors:
-        """Average capacity factors (fraction of nominal capacity achieved)."""
+        """Average capacity factors (fraction of nominal capacity achieved).
+
+        Note that these numbers are not used by the core simulation, they are obtained
+        as a time series from renewables.ninja instead.
+        """
 
         Solar = 0.108
         OffshoreWind = 0.383  # 61% according to Department for Net Zero
