@@ -1,1 +1,0 @@
-- do you imagine plants running constantly at their capacity factor, or do you imagine them ramping up and down when there is surplus electricity?
