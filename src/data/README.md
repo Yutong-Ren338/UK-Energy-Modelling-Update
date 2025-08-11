@@ -1,5 +1,11 @@
 ### Data Sources
 
+To scrape the latest gas data, run:
+
+```shell
+uv run src/data/scrape_gas_demand.py
+```
+
 | Source | Use | Link |
 |:-------|:----|:-----|
 | University of Birmingham | ESPENI: Electrical half hourly raw and cleaned datasets for Great Britain from 2009-11-05 | [Dataset](https://zenodo.org/records/4739408) |
