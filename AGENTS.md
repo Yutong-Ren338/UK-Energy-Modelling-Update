@@ -48,6 +48,8 @@ uv run pytest
 uv run ruff check --fix . && uv run ruff format .
 ```
 
+Instead of manually fixing linting and formatting errors yourself, just run `ruff`.
+
 ### Key Testing Pattern
 - Tests use `tests/config.py::check()` for floating-point comparisons
 - Regression tests compare against documented expected values
