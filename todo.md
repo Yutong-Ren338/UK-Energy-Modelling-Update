@@ -16,15 +16,14 @@
     - https://researchdata.reading.ac.uk/239/
     - https://tyndp.entsoe.eu/resources/demand-time-series-2040-national-trends
 
-    
+- [ ] remove old data
 
 ### Demand modelling
 
-- [ ] do better than averaging the gas demand (repeat it, or use a more sophisticated model)
-- [ ] look for updated version of ESPENI demand data
 - [x] plug in CCC CB7 2050 demand scenarios
 - [x] make it trivial to switch between seasonal, naive, and CCC demand models
-- [ ] use heating degree days for an independent way to model seasonality
+- [ ] do better than averaging the gas demand (repeat it, or use a more sophisticated model)
+- [ ] use ERA5 heating degree days for an independent way to model seasonality
 
 ### Supply modelling
 
