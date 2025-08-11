@@ -22,7 +22,7 @@
 
 - [x] plug in CCC CB7 2050 demand scenarios
 - [x] make it trivial to switch between seasonal, naive, and CCC demand models
-- [ ] do better than averaging the gas demand (repeat it, or use a more sophisticated model)
+- [x] do better than averaging the gas demand (repeat it)
 - [ ] use ERA5 heating degree days for an independent way to model seasonality
 
 ### Supply modelling

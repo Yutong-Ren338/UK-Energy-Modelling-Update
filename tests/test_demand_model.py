@@ -119,6 +119,7 @@ def test_predicted_demand(*, average_year: bool) -> None:
         assert not df.empty, f"Predicted demand for mode {mode} is empty"
         assert df.columns.tolist() == ["demand"], f"Predicted demand for mode {mode} has unexpected columns: {df.columns.tolist()}"
         assert df.index.name == "date", f"Predicted demand for mode {mode} has unexpected index name: {df.index.name}"
+        assert df["demand"].notna().all(), f"Predicted demand for mode {mode} contains NaN values"
         assert (df["demand"] >= 0 * U.TWh).all(), f"Predicted demand for mode {mode} contains negative values"
         assert df["demand"].dtype == "pint[TWh]", f"Predicted demand for mode {mode} has incorrect dtype: {df['demand'].dtype}"
         demands[mode] = df

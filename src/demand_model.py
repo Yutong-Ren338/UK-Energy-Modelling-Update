@@ -72,8 +72,15 @@ def seasonal_demand_scaling(df: pd.DataFrame, *, old_gas_data: bool = False, fil
         DataFrame with daily demand values scaled to 2050 levels.
     """
     df_gas = historical_demand.historical_gas_demand(old_gas_data=old_gas_data, filter_ldz=filter_ldz)
-    gas_seasonality = seasonality_index(df_gas, "demand", average_year=True)
+    gas_seasonality = seasonality_index(df_gas, "demand", average_year=False)
     ele_seasonality = seasonality_index(df, "demand", average_year=False)
+    gas_seasonality = pd.DataFrame(data={"demand": gas_seasonality})
+    ele_seasonality = pd.DataFrame(data={"demand": ele_seasonality})
+
+    year_counts = gas_seasonality.index.year.value_counts()
+    valid_years = year_counts[year_counts >= 365].index  # noqa: PLR2004
+    gas_seasonality = gas_seasonality[gas_seasonality.index.year.isin(valid_years)]
+    gas_seasonality = map_years(ele_seasonality, gas_seasonality)
 
     # get the daily heating demand
     total_2050_heat_demand = A.CB7EnergyDemand2050Buildings * A.CB7FractionHeatDemandBuildings
@@ -84,23 +91,16 @@ def seasonal_demand_scaling(df: pd.DataFrame, *, old_gas_data: bool = False, fil
     non_heating_demand = A.EnergyDemand2050 - total_2050_heat_demand
     daily_non_heating_demand = non_heating_demand / 365 * ele_seasonality
 
-    # join the two series by extracting day of year from electricity demand index
-    daily_non_heating_demand.name = "non_heating_demand"
-    df_out = daily_non_heating_demand.to_frame()
-    daily_heating_demand.name = "heating_demand"
-    daily_heating_demand = daily_heating_demand.to_frame()
-    df_out["day_of_year"] = df.index.dayofyear
-    df_out = df_out.join(daily_heating_demand, on="day_of_year")
+    merged = daily_non_heating_demand.join(daily_heating_demand, how="inner", validate="one_to_many", lsuffix="_non_heating", rsuffix="_heating")
+    merged["demand"] = merged["demand_heating"] + merged["demand_non_heating"]
 
-    # compute the total demand
-    df_out["demand"] = df_out["heating_demand"] + df_out["non_heating_demand"]
-    return df_out[["demand"]]
+    return merged[["demand"]]
 
 
 def map_years(historical_df: pd.DataFrame, predicted_df: pd.DataFrame) -> pd.DataFrame:
     """Randomly map years from the historical DataFrame to the predicted DataFrame.
 
-    Used for CB7 deman data, where we have predicted 2050 demands for 3 weather years.
+    Used for CB7 demand data, where we have predicted 2050 demands for 3 weather years.
     Mapping them randomly to historical years is better than taking an average and using that every year.
 
     Args:
@@ -110,8 +110,9 @@ def map_years(historical_df: pd.DataFrame, predicted_df: pd.DataFrame) -> pd.Dat
     Returns:
         DataFrame with the historical demand data mapped to the predicted years.
     """
-    available_years = predicted_df.index.year.unique()
+    historical_df = historical_df.copy()
     historical_years = historical_df.index.year.unique()
+    available_years = predicted_df.index.year.unique()
 
     # map each historical year to a random choice from available years
     mapping = np.random.default_rng(seed=42).choice(available_years, len(historical_years))
