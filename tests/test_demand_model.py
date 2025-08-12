@@ -9,6 +9,7 @@ from src import (
     matplotlib_style,  # noqa: F401
 )
 from src.data import cb7, historical_demand
+from src.demand_model import DemandMode
 from src.units import Units as U
 from tests.config import OUTPUT_DIR
 
@@ -36,15 +37,18 @@ def test_naive_demand_scaling() -> None:
 def test_seasonality_indices() -> None:
     df_electricity = historical_demand.historical_electricity_demand()
     df_gas = historical_demand.historical_gas_demand()
+    df_hdd = historical_demand.hdd_era5()
     electricity_seasonality = demand_model.seasonality_index(df_electricity, "demand", average_year=False)
     gas_seasonality = demand_model.seasonality_index(df_gas, "demand", average_year=False)
+    hdd_seasonality = demand_model.seasonality_index(df_hdd, "hdd", average_year=False)
 
     plt.figure()
+    plt.plot(hdd_seasonality.index, hdd_seasonality, label="HDD Seasonality Index")
     plt.plot(gas_seasonality.index, gas_seasonality, label="Gas Seasonality Index")
     plt.plot(electricity_seasonality.index, electricity_seasonality, label="Electricity Seasonality Index")
     plt.xlabel("Day of Year")
     plt.ylabel("Seasonality Index")
-    plt.title("Gas and Electricity Seasonality Indices")
+    plt.title("Gas, Electricity, and HDD Seasonality Indices")
     plt.legend()
     plt.savefig(OUTPUT_PATH / "seasonality_indices_comparison.png")
     plt.close()
@@ -53,28 +57,34 @@ def test_seasonality_indices() -> None:
 def test_seasonality_indices_average_year() -> None:
     df_electricity = historical_demand.historical_electricity_demand()
     df_gas = historical_demand.historical_gas_demand()
+    df_hdd = historical_demand.hdd_era5()
     electricity_seasonality = demand_model.seasonality_index(df_electricity, "demand", average_year=True)
     gas_seasonality = demand_model.seasonality_index(df_gas, "demand", average_year=True)
+    hdd_seasonality = demand_model.seasonality_index(df_hdd, "hdd", average_year=True)
 
     # Check that the indices are of the expected length
     assert len(electricity_seasonality) == DAYS_IN_LEAP_YEAR
     assert len(gas_seasonality) == DAYS_IN_LEAP_YEAR
+    assert len(hdd_seasonality) == DAYS_IN_LEAP_YEAR
 
     # Check that the indices are positive
     assert (electricity_seasonality > 0).all()
     assert (gas_seasonality > 0).all()
+    assert (hdd_seasonality > 0).all()
 
     # Check that the mean seasonality index is approximately 1
     check(electricity_seasonality.mean(), 1.0)
     check(gas_seasonality.mean(), 1.0)
+    check(hdd_seasonality.mean(), 1.0)
 
     # Create the plot artifact
     plt.figure()
     plt.plot(gas_seasonality.index, gas_seasonality, label="Gas Seasonality Index")
     plt.plot(electricity_seasonality.index, electricity_seasonality, label="Electricity Seasonality Index")
+    plt.plot(hdd_seasonality.index, hdd_seasonality, label="HDD Seasonality Index")
     plt.xlabel("Day of Year")
     plt.ylabel("Seasonality Index")
-    plt.title("Gas and Electricity Seasonality Indices")
+    plt.title("Gas, Electricity, and HDD Seasonality Indices")
     plt.legend()
     plt.savefig(OUTPUT_PATH / "seasonality_indices_comparison_average_year.png")
     plt.close()
@@ -113,7 +123,7 @@ def test_seasonal_demand_scaling_options() -> None:
 @pytest.mark.parametrize("average_year", [True, False])
 def test_predicted_demand(*, average_year: bool) -> None:
     demands = {}
-    for mode in ["naive", "seasonal", "cb7"]:
+    for mode in DemandMode:
         df = demand_model.predicted_demand(mode=mode, average_year=average_year)
         assert isinstance(df, pd.DataFrame), f"Expected df for mode {mode}, got {type(df)}"
         assert not df.empty, f"Predicted demand for mode {mode} is empty"
@@ -124,7 +134,6 @@ def test_predicted_demand(*, average_year: bool) -> None:
         assert df["demand"].dtype == "pint[TWh]", f"Predicted demand for mode {mode} has incorrect dtype: {df['demand'].dtype}"
         demands[mode] = df
 
-    # plot
     for mode, df in demands.items():
         plt.plot(df.index, df["demand"], label=f"Predicted Demand ({mode})")
     plt.xlabel("Day of Year")

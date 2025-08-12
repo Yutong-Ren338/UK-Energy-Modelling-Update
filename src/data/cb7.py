@@ -33,7 +33,8 @@ def frac_heat_demand_from_buildings() -> float:
     df_filtered = df[mask]
 
     # Calculate fraction excluding "Other home energy use"
-    heating_demand = df_filtered[df_filtered["subsector"] != "Other home energy use"]["value"].sum()
+    # Keeping only "Heat in existing homes" and "Heat in new homes"
+    heating_demand = df_filtered[df_filtered["subsector"].isin(["Heat in existing homes", "Heat in new homes"])]["value"].sum()
     total_demand = df_filtered["value"].sum()
 
     return heating_demand / total_demand
@@ -42,7 +43,7 @@ def frac_heat_demand_from_buildings() -> float:
 def buildings_electricity_demand(*, include_non_residential: bool = True) -> float:
     """Calculate the total electricity demand for UK buildings in 2050 in TWh.
 
-    Calculates for residential and non-residential buildings.
+    Combines demand for residential and non-residential buildings.
 
     Args:
         include_non_residential: If True, includes non-residential buildings in the calculation.

@@ -15,11 +15,13 @@ HoursPerYear = HoursPerDay * 365.25  # Including leap years
 # PROJECTED DEMAND AND EMISSIONS TARGETS
 # ============================================================================
 
-# EnergyDemand2050 = 575 * U.TWh  # UK energy demand target for 2050 from Rei's thesis # noqa: ERA001
 CB7EnergyDemand2050 = 692 * U.TWh  # Seventh Carbon Budget energy demand target for 2050
 EnergyDemand2050 = CB7EnergyDemand2050
 CB7EnergyDemand2050Buildings = 355.44 * U.TWh  # Seventh Carbon Budget energy demand for buildings in 2050
 CB7FractionHeatDemandBuildings = 0.597  # Fraction of energy demand from buildings that is for heating in 2050
+
+FractionHeatDemandSpaceHeating = 0.65  # Fraction of building heating demand that is for space heating - This is an unmotivated assumption for now
+CB7FractionSpaceHeatDemandBuildings = CB7FractionHeatDemandBuildings * FractionHeatDemandSpaceHeating  # only space heating
 
 # CO2 emissions targets and constraints
 CO2Emissions2050 = 59  # Mt CO2 - Maximum emissions allowed in 2050

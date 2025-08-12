@@ -1,4 +1,4 @@
-from typing import Literal
+from enum import StrEnum
 
 import numpy as np
 import pandas as pd
@@ -7,31 +7,12 @@ from src import assumptions as A
 from src.data import cb7, historical_demand
 from src.data.historical_demand import HistoricalDemandSource
 
-DemandMode = Literal["naive", "seasonal", "cb7"]
 
-
-def naive_demand_scaling(df: pd.DataFrame) -> pd.DataFrame:
-    """Get naive scaled demand data for analysis.
-
-    This doesn't take into account increased seasonality from electrification of space heating and hot water.
-
-    Args:
-        df: DataFrame containing the historical electricity demand data.
-
-    Returns:
-        DataFrame with daily demand values scaled to 2050 levels.
-    """
-    # convert from GW to TWh
-    df["demand"] *= A.HoursPerDay
-
-    # Calculate yearly totals and scale each year independently
-    df["year"] = df.index.year
-    yearly_totals = df.groupby("year")["demand"].sum()
-    df["yearly_total"] = df["year"].map(yearly_totals)
-    scaling_factor = A.EnergyDemand2050 / df["yearly_total"]
-    df["demand"] = (df["demand"] * scaling_factor).astype("pint[terawatt_hour]")
-
-    return df[["demand"]]
+class DemandMode(StrEnum):
+    NAIVE = "naive"
+    SEASONAL = "seasonal"
+    CB7 = "cb7"
+    HDD = "hdd"
 
 
 def seasonality_index(df: pd.DataFrame, column: str, *, average_year: bool = False) -> pd.Series:
@@ -56,45 +37,17 @@ def seasonality_index(df: pd.DataFrame, column: str, *, average_year: bool = Fal
     return df[column] / df["yearly_means"]
 
 
-def seasonal_demand_scaling(df: pd.DataFrame, *, old_gas_data: bool = False, filter_ldz: bool = True) -> pd.DataFrame:
-    """Scale the electricity demand data.
-
-    Takes into account increased seasonality from electrification of space heating and hot water.
-    Use the raw historical electricity demand data, but average the gas data over different years.
-
-    Args:
-        df: DataFrame containing the historical electricity demand data.
-        old_gas_data: If True, uses the old gas demand data. This should be False (just for testing).
-        filter_ldz: If True, filters the gas data for "NTS Energy Offtaken, LDZ Offtake Total".
-                           This should always be true (just for testing).
+def average_2050_demands() -> tuple[float, float]:
+    """Get the average 2050 demands for heating and non-heating.
 
     Returns:
-        DataFrame with daily demand values scaled to 2050 levels.
+        Tuple containing the average heating demand and non-heating demand in TWh.
     """
-    df_gas = historical_demand.historical_gas_demand(old_gas_data=old_gas_data, filter_ldz=filter_ldz)
-    gas_seasonality = seasonality_index(df_gas, "demand", average_year=False)
-    ele_seasonality = seasonality_index(df, "demand", average_year=False)
-    gas_seasonality = pd.DataFrame(data={"demand": gas_seasonality})
-    ele_seasonality = pd.DataFrame(data={"demand": ele_seasonality})
-
-    year_counts = gas_seasonality.index.year.value_counts()
-    valid_years = year_counts[year_counts >= 365].index  # noqa: PLR2004
-    gas_seasonality = gas_seasonality[gas_seasonality.index.year.isin(valid_years)]
-    gas_seasonality = map_years(ele_seasonality, gas_seasonality)
-
-    # get the daily heating demand
-    total_2050_heat_demand = A.CB7EnergyDemand2050Buildings * A.CB7FractionHeatDemandBuildings
+    total_2050_heat_demand = A.CB7EnergyDemand2050Buildings * A.CB7FractionSpaceHeatDemandBuildings
     daily_2050_heat_demand = total_2050_heat_demand / 365
-    daily_heating_demand = daily_2050_heat_demand * gas_seasonality
+    daily_2050_non_heating_demand = (A.EnergyDemand2050 - total_2050_heat_demand) / 365
 
-    # daily non-heating demand
-    non_heating_demand = A.EnergyDemand2050 - total_2050_heat_demand
-    daily_non_heating_demand = non_heating_demand / 365 * ele_seasonality
-
-    merged = daily_non_heating_demand.join(daily_heating_demand, how="inner", validate="one_to_many", lsuffix="_non_heating", rsuffix="_heating")
-    merged["demand"] = merged["demand_heating"] + merged["demand_non_heating"]
-
-    return merged[["demand"]]
+    return daily_2050_heat_demand, daily_2050_non_heating_demand
 
 
 def map_years(historical_df: pd.DataFrame, predicted_df: pd.DataFrame) -> pd.DataFrame:
@@ -137,6 +90,98 @@ def map_years(historical_df: pd.DataFrame, predicted_df: pd.DataFrame) -> pd.Dat
     return merged_df.rename(columns={"demand_predicted": "demand"})
 
 
+def naive_demand_scaling(df: pd.DataFrame) -> pd.DataFrame:
+    """Get naive scaled demand data for analysis.
+
+    This doesn't take into account increased seasonality from electrification of space heating and hot water.
+
+    Args:
+        df: DataFrame containing the historical electricity demand data.
+
+    Returns:
+        DataFrame with daily demand values scaled to 2050 levels.
+    """
+    # convert from GW to TWh
+    df["demand"] *= A.HoursPerDay
+
+    # Calculate yearly totals and scale each year independently
+    df["year"] = df.index.year
+    yearly_totals = df.groupby("year")["demand"].sum()
+    df["yearly_total"] = df["year"].map(yearly_totals)
+    scaling_factor = A.EnergyDemand2050 / df["yearly_total"]
+    df["demand"] = (df["demand"] * scaling_factor).astype("pint[terawatt_hour]")
+
+    return df[["demand"]]
+
+
+def seasonal_demand_scaling(df: pd.DataFrame, *, old_gas_data: bool = False, filter_ldz: bool = True) -> pd.DataFrame:
+    """Scale the electricity demand data.
+
+    Takes into account increased seasonality from electrification of space heating and hot water.
+    Use the raw historical electricity demand data, but average the gas data over different years.
+
+    Args:
+        df: DataFrame containing the historical electricity demand data.
+        old_gas_data: If True, uses the old gas demand data. This should be False (just for testing).
+        filter_ldz: If True, filters the gas data for "NTS Energy Offtaken, LDZ Offtake Total".
+                           This should always be true (just for testing).
+
+    Returns:
+        DataFrame with daily demand values scaled to 2050 levels.
+    """
+    df_gas = historical_demand.historical_gas_demand(old_gas_data=old_gas_data, filter_ldz=filter_ldz)
+    gas_seasonality = seasonality_index(df_gas, "demand", average_year=False)
+    ele_seasonality = seasonality_index(df, "demand", average_year=False)
+    gas_seasonality = pd.DataFrame(data={"demand": gas_seasonality})
+    ele_seasonality = pd.DataFrame(data={"demand": ele_seasonality})
+
+    year_counts = gas_seasonality.index.year.value_counts()
+    valid_years = year_counts[year_counts >= 365].index  # noqa: PLR2004
+    gas_seasonality = gas_seasonality[gas_seasonality.index.year.isin(valid_years)]
+    gas_seasonality = map_years(ele_seasonality, gas_seasonality)
+
+    # get the daily heating demand
+    daily_2050_heat_demand, daily_2050_non_heating_demand = average_2050_demands()
+    daily_heating_demand = daily_2050_heat_demand * gas_seasonality
+    daily_non_heating_demand = daily_2050_non_heating_demand * ele_seasonality
+
+    merged = daily_non_heating_demand.join(daily_heating_demand, how="inner", validate="one_to_many", lsuffix="_non_heating", rsuffix="_heating")
+    merged["demand"] = merged["demand_heating"] + merged["demand_non_heating"]
+
+    return merged[["demand"]]
+
+
+def hdd_demand_scaling(df: pd.DataFrame) -> pd.DataFrame:
+    """Scale the electricity demand data based on heating degree days (HDD).
+
+    Args:
+        df: DataFrame containing the historical electricity demand data.
+
+    Returns:
+        DataFrame with daily demand values scaled to 2050 levels.
+    """
+    # get the electricity seasonality (non heating demand seasonality)
+    ele_seasonality = seasonality_index(df, "demand", average_year=False)
+    ele_seasonality = pd.DataFrame(data={"demand": ele_seasonality})
+
+    # get the heating demand seasonality
+    hdd = historical_demand.hdd_era5()
+    hdd_seasonality = seasonality_index(hdd, "hdd", average_year=False)
+    hdd_seasonality = pd.DataFrame(data={"demand": hdd_seasonality})
+
+    # compute the final seasonal demand time eries
+    daily_2050_heat_demand, daily_2050_non_heating_demand = average_2050_demands()
+    daily_2050_heat_demand *= hdd_seasonality
+    daily_2050_non_heating_demand *= ele_seasonality
+
+    merged = daily_2050_non_heating_demand.join(
+        daily_2050_heat_demand, how="inner", validate="one_to_one", lsuffix="_non_heating", rsuffix="_heating"
+    )
+    merged["demand"] = merged["demand_heating"] + merged["demand_non_heating"]
+
+    return merged[["demand"]]
+
+
 def predicted_demand(
     mode: DemandMode = "naive",
     historical: HistoricalDemandSource = "era5",
@@ -167,13 +212,15 @@ def predicted_demand(
         out = seasonal_demand_scaling(df, old_gas_data=old_gas_data, filter_ldz=filter_ldz)
     elif mode == "cb7":
         out = cb7.cb7_demand(A.EnergyDemand2050)[["demand"]]
+        # randomly match cb7 demand years to historical years
+        if not average_year:
+            out = map_years(historical_df=df, predicted_df=out)
+    elif mode == "hdd":
+        out = hdd_demand_scaling(df)
     else:
         raise ValueError(f"Invalid mode. Choose from {DemandMode.__args__}.")
 
     if average_year:
         out = out.groupby(out.index.dayofyear).mean()
-    elif mode == "cb7":
-        # randomly match cb7 demand years to historical years
-        out = map_years(historical_df=df, predicted_df=out)
 
     return out

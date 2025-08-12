@@ -23,7 +23,8 @@
 - [x] plug in CCC CB7 2050 demand scenarios
 - [x] make it trivial to switch between seasonal, naive, and CCC demand models
 - [x] do better than averaging the gas demand (repeat it)
-- [ ] use ERA5 heating degree days for an independent way to model seasonality
+- [x] it's only space heating that is very seasonal, hot water isn't. so update heating demands to reflect this. Also historical gas demands will include this, so it's probably not as good as HDD.
+- [x] use ERA5 heating degree days for an independent way to model seasonality
 
 ### Supply modelling
 

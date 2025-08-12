@@ -10,6 +10,7 @@ from pint import Quantity
 
 import src.assumptions as A
 from src import demand_model, supply_model
+from src.demand_model import DemandMode
 from src.power_system import PowerSystem
 from src.units import Units as U
 from tests.config import OUTPUT_DIR, check
@@ -232,7 +233,7 @@ def test_multiple_renewable_capacities(sample_data: pd.DataFrame) -> None:
     assert len({r["minimum_hydrogen_storage"] for r in all_results.values()}) > 1, "Different capacities should produce different results"
 
 
-@pytest.mark.parametrize("demand_mode", ["naive", "seasonal", "cb7"])
+@pytest.mark.parametrize("demand_mode", list(DemandMode))
 def test_plot_simulation_results(demand_mode: str) -> None:
     """Test plotting simulation results for different demand modes."""
     # Setup test parameters
