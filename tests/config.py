@@ -2,6 +2,8 @@ from pathlib import Path
 
 import numpy as np
 
+from src import matplotlib_style  # noqa: F401
+
 # test artifacts
 OUTPUT_DIR = Path("tests/output")
 OUTPUT_DIR.mkdir(exist_ok=True)
