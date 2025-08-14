@@ -16,7 +16,7 @@
     - https://researchdata.reading.ac.uk/239/
     - https://tyndp.entsoe.eu/resources/demand-time-series-2040-national-trends
 
-- [ ] remove old data
+- [x] remove old data
 
 ### Demand modelling
 
