@@ -6,7 +6,7 @@ from pint import Quantity
 from src.units import Units as U
 
 TARGET_YEAR = 2050
-DATA_PATH = Path(__file__).parents[2] / "data" / "new"
+DATA_PATH = Path(__file__).parents[2] / "data"
 
 
 def frac_heat_demand_from_buildings() -> float:

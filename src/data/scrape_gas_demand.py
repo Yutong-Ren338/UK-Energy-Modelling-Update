@@ -86,8 +86,8 @@ if __name__ == "__main__":
     project_root = current_file.parents[2]
     date_from = "2020-01-01"
     date_to = datetime.now(tz=UTC).strftime("%Y-%m-%d")
-    output_filename = project_root / "data" / "new" / "UK_gas_demand.csv"
-    processed_filename = project_root / "data" / "new" / "UK_gas_demand_processed.csv"
+    output_filename = project_root / "data" / "UK_gas_demand.csv"
+    processed_filename = project_root / "data" / "UK_gas_demand_processed.csv"
 
     scrape_uk_gas_data(date_from, date_to, output_filename)
     preprocess_gas_data(output_filename, processed_filename)

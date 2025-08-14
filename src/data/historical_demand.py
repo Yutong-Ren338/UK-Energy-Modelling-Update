@@ -92,7 +92,7 @@ def historical_gas_demand(*, old_gas_data: bool = False, filter_ldz: bool = True
         df["demand (TWh)"] = df["UK Total Demand (mcm)"] * nat_gas_cv * 1 / 3600
         df["date"] = df["Date"]
     else:
-        df = pd.read_csv(data_dir / "new" / "UK_gas_demand_processed.csv", parse_dates=["date"])
+        df = pd.read_csv(data_dir / "UK_gas_demand_processed.csv", parse_dates=["date"])
         if filter_ldz:
             df = df[df["use"] == "NTS Energy Offtaken, LDZ Offtake Total"]
 
