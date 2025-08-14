@@ -76,7 +76,7 @@ def test_demand_era5_weather_adjusted() -> None:
 
 
 def test_gas_demand() -> None:
-    df = historical_demand.historical_gas_demand(old_gas_data=False, filter_ldz=True)
+    df = historical_demand.historical_gas_demand(filter_ldz=True)
     assert df.shape[0] > 0
     assert df.columns.tolist() == ["demand"]
     assert df["demand"].dtype == "pint[TWh]"
@@ -86,12 +86,9 @@ def test_gas_demand() -> None:
     assert df.index.dtype == "datetime64[ns]"
     assert not df.index.has_duplicates
 
-    df_old = historical_demand.historical_gas_demand(old_gas_data=True, filter_ldz=False)
-
     # plot the gas demand
     plt.figure(figsize=(8, 4))
     plt.plot(df.index, df["demand"], label="Gas Demand")
-    plt.plot(df_old.index, df_old["demand"], label="Old Gas Demand")
     plt.title("Daily Gas Demand")
     plt.xlabel("Date")
     plt.ylabel("Gas Demand (TWh)")

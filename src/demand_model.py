@@ -114,7 +114,7 @@ def naive_demand_scaling(df: pd.DataFrame) -> pd.DataFrame:
     return df[["demand"]]
 
 
-def seasonal_demand_scaling(df: pd.DataFrame, *, old_gas_data: bool = False, filter_ldz: bool = True) -> pd.DataFrame:
+def seasonal_demand_scaling(df: pd.DataFrame, *, filter_ldz: bool = True) -> pd.DataFrame:
     """Scale the electricity demand data.
 
     Takes into account increased seasonality from electrification of space heating and hot water.
@@ -122,14 +122,13 @@ def seasonal_demand_scaling(df: pd.DataFrame, *, old_gas_data: bool = False, fil
 
     Args:
         df: DataFrame containing the historical electricity demand data.
-        old_gas_data: If True, uses the old gas demand data. This should be False (just for testing).
         filter_ldz: If True, filters the gas data for "NTS Energy Offtaken, LDZ Offtake Total".
                            This should always be true (just for testing).
 
     Returns:
         DataFrame with daily demand values scaled to 2050 levels.
     """
-    df_gas = historical_demand.historical_gas_demand(old_gas_data=old_gas_data, filter_ldz=filter_ldz)
+    df_gas = historical_demand.historical_gas_demand(filter_ldz=filter_ldz)
     gas_seasonality = seasonality_index(df_gas, "demand", average_year=False)
     ele_seasonality = seasonality_index(df, "demand", average_year=False)
     gas_seasonality = pd.DataFrame(data={"demand": gas_seasonality})
@@ -186,7 +185,6 @@ def predicted_demand(
     mode: DemandMode = "naive",
     historical: HistoricalDemandSource = "era5",
     *,
-    old_gas_data: bool = False,
     filter_ldz: bool = True,
     average_year: bool = True,
 ) -> pd.DataFrame:
@@ -195,7 +193,6 @@ def predicted_demand(
     Args:
         mode: The mode of demand prediction.
         historical: The source of historical demand data, either "era5" or "espeni".
-        old_gas_data: If True, uses the old gas demand data.
         filter_ldz: If True, filters the gas data for "NTS Energy Offtaken, LDZ Offtake Total".
         average_year: If True, returns the average over different years.
 
@@ -209,7 +206,7 @@ def predicted_demand(
     if mode == "naive":
         out = naive_demand_scaling(df)
     elif mode == "seasonal":
-        out = seasonal_demand_scaling(df, old_gas_data=old_gas_data, filter_ldz=filter_ldz)
+        out = seasonal_demand_scaling(df, filter_ldz=filter_ldz)
     elif mode == "cb7":
         out = cb7.cb7_demand(A.EnergyDemand2050)[["demand"]]
         # randomly match cb7 demand years to historical years
