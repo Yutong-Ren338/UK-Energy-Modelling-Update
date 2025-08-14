@@ -1,12 +1,10 @@
-from pathlib import Path
-
 import pandas as pd
 from pint import Quantity
 
+from src import DATA_DIR
 from src.units import Units as U
 
 TARGET_YEAR = 2050
-DATA_PATH = Path(__file__).parents[2] / "data"
 
 
 def frac_heat_demand_from_buildings() -> float:
@@ -19,7 +17,7 @@ def frac_heat_demand_from_buildings() -> float:
     Returns:
         Fraction of energy demand that is for heating (expected ~0.597)
     """
-    data_path = DATA_PATH / "The-Seventh-Carbon-Budget-full-dataset.xlsx"
+    data_path = DATA_DIR / "The-Seventh-Carbon-Budget-full-dataset.xlsx"
 
     df = pd.read_excel(data_path, sheet_name="Subsector-level data")
 
@@ -51,7 +49,7 @@ def buildings_electricity_demand(*, include_non_residential: bool = True) -> flo
     Returns:
         Total electricity demand for buildings in 2050 in TWh.
     """
-    data_path = DATA_PATH / "The-Seventh-Carbon-Budget-full-dataset.xlsx"
+    data_path = DATA_DIR / "The-Seventh-Carbon-Budget-full-dataset.xlsx"
     df = pd.read_excel(data_path, sheet_name="Sector-level data")
     df = df[df["scenario"] == "Balanced Pathway"]
     df = df[df["country"] == "United Kingdom"]
@@ -70,7 +68,7 @@ def total_demand_2050() -> float:
     Returns:
         Total energy demand for buildings in 2050 in TWh.
     """
-    data_path = DATA_PATH / "The-Seventh-Carbon-Budget-full-dataset.xlsx"
+    data_path = DATA_DIR / "The-Seventh-Carbon-Budget-full-dataset.xlsx"
     df = pd.read_excel(data_path, sheet_name="Economy-wide data")
     df = df[df["scenario"] == "Balanced Pathway"]
     df = df[df["country"] == "United Kingdom"]
@@ -89,7 +87,7 @@ def extract_daily_2050_demand() -> None:
     """
     demand_year = 2050
     df = pd.read_excel(
-        DATA_PATH / "The-Seventh-Carbon-Budget-methodology-accompanying-data-electricity-supply-hourly-results.xlsx",
+        DATA_DIR / "The-Seventh-Carbon-Budget-methodology-accompanying-data-electricity-supply-hourly-results.xlsx",
         sheet_name="Data",
         skiprows=4,
     )
@@ -115,7 +113,7 @@ def extract_daily_2050_demand() -> None:
     df_combined = pd.concat(dfs.values(), ignore_index=True)
 
     # save as csv
-    df_combined.to_csv(DATA_PATH / f"ccc_daily_demand_{demand_year}.csv", index=False)
+    df_combined.to_csv(DATA_DIR / f"ccc_daily_demand_{demand_year}.csv", index=False)
 
 
 def cb7_demand(total_yearly_demand: Quantity) -> pd.DataFrame:
@@ -129,7 +127,7 @@ def cb7_demand(total_yearly_demand: Quantity) -> pd.DataFrame:
     Returns:
         DataFrame containing the demand data in GW.
     """
-    df = pd.read_csv(DATA_PATH / "ccc_daily_demand_2050.csv", index_col=0, parse_dates=True)
+    df = pd.read_csv(DATA_DIR / "ccc_daily_demand_2050.csv", index_col=0, parse_dates=True)
     df = df.rename(columns={"demand (TWh)": "demand"})
     df.index.name = "date"
     df["demand"] = (df["demand"]).astype("pint[TWh]")
