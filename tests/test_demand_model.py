@@ -110,9 +110,6 @@ def test_seasonal_demand_scaling_options() -> None:
     df_seasonal = demand_model.predicted_demand(mode="seasonal", filter_ldz=False)
     plt.plot(df_seasonal.index, df_seasonal.values, label="Seasonal Demand Scaling (+ No Non-Residential)")
 
-    df_seasonal = demand_model.predicted_demand(mode="seasonal", old_gas_data=True, filter_ldz=False)
-    plt.plot(df_seasonal.index, df_seasonal.values, label="Seasonal Demand Scaling (+ Old gas data)")
-
     plt.xlabel("Day of Year")
     plt.ylabel("Electricity Demand (TWh/day)")
     plt.legend(fontsize=8)

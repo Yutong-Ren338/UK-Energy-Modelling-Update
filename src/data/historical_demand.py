@@ -74,27 +74,19 @@ def historical_electricity_demand(source: HistoricalDemandSource = "era5") -> pd
     raise ValueError("Invalid source. Choose 'era5' or 'espeni'.")
 
 
-def historical_gas_demand(*, old_gas_data: bool = False, filter_ldz: bool = True) -> pd.DataFrame:
+def historical_gas_demand(*, filter_ldz: bool = True) -> pd.DataFrame:
     """Load and return the gas demand data for the UK.
 
     Args:
-        old_gas_data: If True, use the old gas demand data.
         filter_ldz: If True, filter the data for "NTS Energy Offtaken, LDZ Offtake Total".
 
     Returns:
         DataFrame containing the gas demand data.
     """
     data_dir = Path(__file__).parents[2] / "data"
-    if old_gas_data:
-        assert not filter_ldz, "Old data does not support filtering by LZD"
-        df = pd.read_excel(data_dir / "UKGasDemand2018-17Dec23.xlsx", sheet_name="Sheet1")
-        nat_gas_cv = 35.17  # Caloric value of gas in MJ/m3
-        df["demand (TWh)"] = df["UK Total Demand (mcm)"] * nat_gas_cv * 1 / 3600
-        df["date"] = df["Date"]
-    else:
-        df = pd.read_csv(data_dir / "new" / "UK_gas_demand_processed.csv", parse_dates=["date"])
-        if filter_ldz:
-            df = df[df["use"] == "NTS Energy Offtaken, LDZ Offtake Total"]
+    df = pd.read_csv(data_dir / "UK_gas_demand_processed.csv", parse_dates=["date"])
+    if filter_ldz:
+        df = df[df["use"] == "NTS Energy Offtaken, LDZ Offtake Total"]
 
     # set demand units and rename column
     df["demand (TWh)"] = df["demand (TWh)"].astype("pint[TWh]")
