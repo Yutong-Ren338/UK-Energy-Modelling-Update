@@ -1,9 +1,11 @@
 """This module needs to be updated to use pint units."""
 
+from pint import Quantity
+
 import src.assumptions as A
 
 
-def yearly_dac_energy_cost(mt_co2: float, energy_cost: float, storage_energy_cost: float) -> float:
+def yearly_dac_energy_cost(mt_co2: float, energy_cost: Quantity, storage_energy_cost: float) -> float:
     """Calculate the total energy cost for Direct Air Capture (DAC).
 
     Calculates cost based on the amount of CO2 in Mt and the energy cost.
@@ -31,7 +33,7 @@ def yearly_dac_energy_cost(mt_co2: float, energy_cost: float, storage_energy_cos
     return total_energy_twh + storage_energy_cost
 
 
-def yearly_dac_energy_cost_cumulative(cum_mt_co2: float, energy_cost: float, storage_energy_cost: float, num_years: int) -> float:
+def yearly_dac_energy_cost_cumulative(cum_mt_co2: float, energy_cost: Quantity, storage_energy_cost: float, num_years: int) -> float:
     """Calculate the cumulative energy cost for Direct Air Capture (DAC) over a number of years.
 
     Args:

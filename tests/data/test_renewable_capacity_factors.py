@@ -48,4 +48,4 @@ def test_get_renewable_capacity_factors_resampling() -> None:
     assert str(daily_result.dtypes["wind"]).startswith("pint")
 
     # Check that index frequency matches resampling rule
-    assert daily_result.index.freq == pd.Timedelta(days=1)
+    assert daily_result.index.freq == pd.Timedelta(days=1)  # type: ignore[possibly-unbound-attribute]

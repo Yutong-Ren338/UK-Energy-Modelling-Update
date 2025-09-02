@@ -41,21 +41,23 @@ def sample_data_rei() -> pd.DataFrame:
 @pytest.fixture
 def sample_data() -> pd.DataFrame:
     # Generate demand and supply data
-    demand_df = demand_model.predicted_demand(mode="cb7", average_year=False)
+    demand_df = demand_model.predicted_demand(mode=DemandMode.CB7, average_year=False)
     return supply_model.get_net_supply(demand_df).reset_index()
 
 
 @pytest.fixture
 def power_system_model() -> PowerSystem:
-    return PowerSystem(**SIMULATION_KWARGS)
+    return PowerSystem(**SIMULATION_KWARGS)  # type: ignore[missing-argument]
 
 
 def test_run_simulation_with_expected_outputs(power_system_model: PowerSystem, sample_data_rei: pd.DataFrame) -> None:
     # Run the simulation
     sim_df = power_system_model.run_simulation(sample_data_rei)
+    assert sim_df is not None
 
     # Analyze results
     results = power_system_model.analyze_simulation_results(sim_df)
+    assert results is not None
 
     # Check that the expected outputs match the documented values
     # (with some tolerance for floating point precision)
@@ -92,6 +94,7 @@ def test_run_simulation_more_aggressive_dac(sample_data_rei: pd.DataFrame) -> No
     )
     sim_df = model.run_simulation(sample_data_rei)
     results = model.analyze_simulation_results(sim_df)
+    assert results is not None
 
     # Check that results are reasonable with increased DAC capacity
     assert results["annual_dac_energy"] > 38.47911516786211 * U.TWh, "DAC energy should increase with more capacity"
@@ -99,6 +102,7 @@ def test_run_simulation_more_aggressive_dac(sample_data_rei: pd.DataFrame) -> No
 
 def test_simulation_creates_expected_columns(power_system_model: PowerSystem, sample_data_rei: pd.DataFrame) -> None:
     sim_df = power_system_model.run_simulation(sample_data_rei)
+    assert sim_df is not None
 
     # Check that expected columns exist for 250GW renewable capacity
     expected_columns = [
@@ -117,6 +121,7 @@ def test_simulation_creates_expected_columns(power_system_model: PowerSystem, sa
 
 def test_simulation_physical_constraints(power_system_model: PowerSystem, sample_data_rei: pd.DataFrame) -> None:
     sim_df = power_system_model.run_simulation(sample_data_rei)
+    assert sim_df is not None
 
     # Check hydrogen storage level constraints
     hydrogen_storage_col = "hydrogen_storage_level (TWh),RC=250GW"
@@ -145,7 +150,9 @@ def test_simulation_physical_constraints(power_system_model: PowerSystem, sample
 
 def test_analyze_simulation_results_structure(power_system_model: PowerSystem, sample_data_rei: pd.DataFrame) -> None:
     sim_df = power_system_model.run_simulation(sample_data_rei)
+    assert sim_df is not None
     results = power_system_model.analyze_simulation_results(sim_df)
+    assert results is not None
 
     # Check that all expected keys are present
     expected_keys = {
@@ -184,6 +191,7 @@ def test_simulation_with_custom_renewable_capacity(sample_data: pd.DataFrame) ->
         dac_capacity=A.DAC.Capacity,
     )
     sim_df = custom_model.run_simulation(sample_data)
+    assert sim_df is not None
     results = custom_model.analyze_simulation_results(sim_df)
 
     assert results is not None
@@ -220,6 +228,7 @@ def test_multiple_renewable_capacities(sample_data: pd.DataFrame) -> None:
         if sim_df is None:
             continue
         results = model.analyze_simulation_results(sim_df)
+        assert results is not None
         all_results[capacity] = results
 
         # Verify that each capacity produces valid results
@@ -234,7 +243,7 @@ def test_multiple_renewable_capacities(sample_data: pd.DataFrame) -> None:
 
 
 @pytest.mark.parametrize("demand_mode", list(DemandMode))
-def test_plot_simulation_results(demand_mode: str) -> None:
+def test_plot_simulation_results(demand_mode: DemandMode) -> None:
     """Test plotting simulation results for different demand modes."""
     # Setup test parameters
     renewable_capacity = 450
@@ -257,6 +266,7 @@ def test_plot_simulation_results(demand_mode: str) -> None:
     # Run simulation
     sim_df = storage.run_simulation(df)
     results = storage.analyze_simulation_results(sim_df)
+    assert results is not None
 
     # Create output directory for simulation runs
     simulation_outdir = OUTPUT_PATH / "simulation_runs"
@@ -281,7 +291,7 @@ def test_plot_simulation_results(demand_mode: str) -> None:
 
 def test_simulation_timing() -> None:
     """Time the power system simulation to measure performance across different parameter combinations."""
-    demand_mode = "seasonal"  # Use seasonal mode for timing test
+    demand_mode = DemandMode.SEASONAL  # Use seasonal mode for timing test
 
     # Generate demand and supply data once
     demand_df = demand_model.predicted_demand(mode=demand_mode, average_year=False)
@@ -379,6 +389,8 @@ def test_medium_term_storage_functionality(sample_data: pd.DataFrame, *, only_da
     # Analyze results
     analysis_with_medium = model_with_medium.analyze_simulation_results(results_with_medium)
     analysis_without_medium = model_without_medium.analyze_simulation_results(results_without_medium)
+    assert analysis_with_medium is not None
+    assert analysis_without_medium is not None
 
     # With medium storage, hydrogen minimum should be higher (medium storage takes priority)
     assert analysis_with_medium["minimum_hydrogen_storage"] >= analysis_without_medium["minimum_hydrogen_storage"], (

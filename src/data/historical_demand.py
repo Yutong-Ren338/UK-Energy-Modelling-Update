@@ -47,7 +47,7 @@ def demand_espeni(resample: str | None = None) -> pd.DataFrame:
     df = df[["ELEXM_utc", "POWER_ESPENI_MW"]]
     df = df.rename(columns={"ELEXM_utc": "date", "POWER_ESPENI_MW": "demand"})
     df["demand"] /= 1000.0  # convert to GW
-    df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None)
+    df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None)  # type: ignore[unresolved-attribute]
     df = df.set_index("date")
     if resample:
         df = df.resample(resample).mean()

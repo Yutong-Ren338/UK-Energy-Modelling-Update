@@ -93,21 +93,21 @@ def test_seasonality_indices_average_year() -> None:
 def test_seasonal_demand_scaling_options() -> None:
     A.CB7EnergyDemand2050Buildings = cb7.buildings_electricity_demand(include_non_residential=True)
     df = historical_demand.historical_electricity_demand()
-    df["day_of_year"] = df.index.dayofyear
+    df["day_of_year"] = df.index.dayofyear  # type: ignore[unresolved-attribute]
     average_year = (df.groupby("day_of_year")["demand"].mean() * A.HoursPerDay).astype("pint[terawatt_hour]")
     plt.plot(average_year.index, average_year.values, label="Average Historical Demand")
 
-    df_naive = demand_model.predicted_demand(mode="naive")
+    df_naive = demand_model.predicted_demand(mode=DemandMode.NAIVE)
     plt.plot(df_naive.index, df_naive.values, label="Naive Demand Scaling")
 
-    df_seasonal = demand_model.predicted_demand(mode="seasonal")
+    df_seasonal = demand_model.predicted_demand(mode=DemandMode.SEASONAL)
     plt.plot(df_seasonal.index, df_seasonal.values, label="Seasonal Demand Scaling")
 
-    df_seasonal = demand_model.predicted_demand(mode="seasonal", filter_ldz=False)
+    df_seasonal = demand_model.predicted_demand(mode=DemandMode.SEASONAL, filter_ldz=False)
     plt.plot(df_seasonal.index, df_seasonal.values, label="Seasonal Demand Scaling (No LDZ Filter)")
 
     A.CB7EnergyDemand2050Buildings = cb7.buildings_electricity_demand(include_non_residential=False)
-    df_seasonal = demand_model.predicted_demand(mode="seasonal", filter_ldz=False)
+    df_seasonal = demand_model.predicted_demand(mode=DemandMode.SEASONAL, filter_ldz=False)
     plt.plot(df_seasonal.index, df_seasonal.values, label="Seasonal Demand Scaling (+ No Non-Residential)")
 
     plt.xlabel("Day of Year")

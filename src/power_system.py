@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import gridspec
+from pint import Quantity
 
 import src.assumptions as A
 from src.power_system_core import SimulationParameters, simulate_power_system_core
@@ -37,14 +38,14 @@ class PowerSystem:
     def __init__(  # noqa: PLR0913
         self,
         *,
-        renewable_capacity: int,
-        hydrogen_storage_capacity: float,
-        electrolyser_power: float,
-        dac_capacity: float,
-        hydrogen_generation_power: float | None = None,
-        medium_storage_capacity: float | None = None,
-        medium_storage_power: float | None = None,
-        gas_ccs_capacity: float | None = None,
+        renewable_capacity: Quantity,
+        hydrogen_storage_capacity: Quantity,
+        electrolyser_power: Quantity,
+        dac_capacity: Quantity,
+        hydrogen_generation_power: Quantity | None = None,
+        medium_storage_capacity: Quantity | None = None,
+        medium_storage_power: Quantity | None = None,
+        gas_ccs_capacity: Quantity | None = None,
         only_dac_if_hydrogen_storage_full: bool = True,
     ) -> None:
         """Initialize the power system model with required parameters.
@@ -206,7 +207,7 @@ class PowerSystem:
         assert (df[columns.gas_ccs_energy] >= 0).all(), "Gas CCS energy cannot be negative"
         assert (df[columns.gas_ccs_energy] <= self.gas_ccs_max_daily_energy * U.TWh).all(), "Gas CCS energy cannot exceed its maximum daily capacity"
 
-    def analyze_simulation_results(self, sim_df: pd.DataFrame) -> dict | None:
+    def analyze_simulation_results(self, sim_df: pd.DataFrame | None) -> dict | None:
         """Analyze simulation results and return key metrics.
 
         Args:
