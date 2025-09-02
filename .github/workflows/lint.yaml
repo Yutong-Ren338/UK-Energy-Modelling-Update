@@ -34,5 +34,5 @@ jobs:
         run: uv sync
 
       - name: Run ty
-        run: uv run ty check --eerror
+        run: uv run ty check
 
