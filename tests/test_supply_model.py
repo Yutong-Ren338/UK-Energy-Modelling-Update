@@ -7,6 +7,7 @@ from src import (
     supply_model,
 )
 from src.data import renewable_capacity_factors
+from src.demand_model import DemandMode
 from src.units import Units as U
 from tests.config import OUTPUT_DIR
 
@@ -15,8 +16,8 @@ OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 
 
 def test_fraction_days_without_excess() -> None:
-    demand_era5 = demand_model.predicted_demand(mode="seasonal", historical="era5", average_year=False)
-    demand_espeni = demand_model.predicted_demand(mode="seasonal", historical="espeni", average_year=False)
+    demand_era5 = demand_model.predicted_demand(mode=DemandMode.SEASONAL, historical="era5", average_year=False)
+    demand_espeni = demand_model.predicted_demand(mode=DemandMode.SEASONAL, historical="espeni", average_year=False)
 
     A.Nuclear.Capacity = 12 * U.GW
     era5_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply(demand_era5), return_mean=True)
@@ -39,9 +40,9 @@ def test_fraction_days_without_excess() -> None:
 
 def test_fraction_days_without_excess_naive_demand() -> None:
     # now a version comparing naive and new demand scaling
-    demand_naive = demand_model.predicted_demand(mode="naive", historical="era5", average_year=False)
-    demand_seasonal = demand_model.predicted_demand(mode="seasonal", historical="era5", average_year=False)
-    demand_cb7 = demand_model.predicted_demand(mode="cb7", historical="era5", average_year=False)
+    demand_naive = demand_model.predicted_demand(mode=DemandMode.NAIVE, historical="era5", average_year=False)
+    demand_seasonal = demand_model.predicted_demand(mode=DemandMode.SEASONAL, historical="era5", average_year=False)
+    demand_cb7 = demand_model.predicted_demand(mode=DemandMode.CB7, historical="era5", average_year=False)
 
     A.Nuclear.Capacity = 12 * U.GW
     naive_nuclear = supply_model.fraction_days_without_excess(supply_model.get_net_supply(demand_naive), return_mean=True)
@@ -68,9 +69,9 @@ def test_fraction_days_without_excess_naive_demand() -> None:
 
 def test_total_unmet_demand() -> None:
     # now a version comparing naive and new demand scaling
-    demand_naive = demand_model.predicted_demand(mode="naive", historical="era5", average_year=False)
-    demand_seasonal = demand_model.predicted_demand(mode="seasonal", historical="era5", average_year=False)
-    demand_cb7 = demand_model.predicted_demand(mode="cb7", historical="era5", average_year=False)
+    demand_naive = demand_model.predicted_demand(mode=DemandMode.NAIVE, historical="era5", average_year=False)
+    demand_seasonal = demand_model.predicted_demand(mode=DemandMode.SEASONAL, historical="era5", average_year=False)
+    demand_cb7 = demand_model.predicted_demand(mode=DemandMode.CB7, historical="era5", average_year=False)
 
     original_capacity = A.Nuclear.Capacity
     A.Nuclear.Capacity = 12 * U.GW
@@ -107,11 +108,11 @@ def test_compare_supply_demand() -> None:
     plt.plot(mean.index, mean, label="Supply")
 
     # naive demand
-    naive_df = demand_model.predicted_demand(mode="naive", average_year=True)
+    naive_df = demand_model.predicted_demand(mode=DemandMode.NAIVE, average_year=True)
     plt.plot(naive_df.index, naive_df["demand"], label="Naive Demand")
 
     # seasonal demand
-    seasonal_df = demand_model.predicted_demand(mode="seasonal", average_year=True)
+    seasonal_df = demand_model.predicted_demand(mode=DemandMode.SEASONAL, average_year=True)
     plt.plot(seasonal_df.index, seasonal_df["demand"], label="Seasonal Demand")
 
     plt.xlabel("Day of Year")
@@ -123,9 +124,9 @@ def test_compare_supply_demand() -> None:
 
 def test_unmet_demand_by_month() -> None:
     # now a version comparing naive and new demand scaling
-    demand_naive = demand_model.predicted_demand(mode="naive", historical="era5", average_year=False)
-    demand_seasonal = demand_model.predicted_demand(mode="seasonal", historical="era5", average_year=False)
-    demand_cb7 = demand_model.predicted_demand(mode="cb7", historical="era5", average_year=False)
+    demand_naive = demand_model.predicted_demand(mode=DemandMode.NAIVE, historical="era5", average_year=False)
+    demand_seasonal = demand_model.predicted_demand(mode=DemandMode.SEASONAL, historical="era5", average_year=False)
+    demand_cb7 = demand_model.predicted_demand(mode=DemandMode.CB7, historical="era5", average_year=False)
 
     net_supply_naive = supply_model.get_net_supply(demand_naive)
     net_supply_seasonal = supply_model.get_net_supply(demand_seasonal)

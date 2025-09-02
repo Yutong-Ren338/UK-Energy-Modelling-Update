@@ -27,11 +27,11 @@ def seasonality_index(df: pd.DataFrame, column: str, *, average_year: bool = Fal
         Series containing the seasonality index.
     """
     if average_year:
-        df["day_of_year"] = df.index.dayofyear
+        df["day_of_year"] = df.index.dayofyear  # type: ignore[unresolved-attribute]
         xs = df.groupby("day_of_year")[column].mean()
         return xs / xs.mean()
 
-    df["year"] = df.index.year
+    df["year"] = df.index.year  # type: ignore[unresolved-attribute]
     yearly_means = df.groupby("year")[column].mean()
     df["yearly_means"] = df["year"].map(yearly_means)
     return df[column] / df["yearly_means"]
@@ -64,17 +64,17 @@ def map_years(historical_df: pd.DataFrame, predicted_df: pd.DataFrame) -> pd.Dat
         DataFrame with the historical demand data mapped to the predicted years.
     """
     historical_df = historical_df.copy()
-    historical_years = historical_df.index.year.unique()
-    available_years = predicted_df.index.year.unique()
+    historical_years = historical_df.index.year.unique()  # type: ignore[unresolved-attribute]
+    available_years = predicted_df.index.year.unique()  # type: ignore[unresolved-attribute]
 
     # map each historical year to a random choice from available years
     mapping = np.random.default_rng(seed=42).choice(available_years, len(historical_years))
-    historical_df["year"] = historical_df.index.year
+    historical_df["year"] = historical_df.index.year  # type: ignore[unresolved-attribute]
     historical_df["year"] = historical_df["year"].map(dict(zip(historical_years, mapping, strict=False)))
 
-    historical_df["day_of_year"] = historical_df.index.day_of_year
-    predicted_df["year"] = predicted_df.index.year
-    predicted_df["day_of_year"] = predicted_df.index.day_of_year
+    historical_df["day_of_year"] = historical_df.index.day_of_year  # type: ignore[unresolved-attribute]
+    predicted_df["year"] = predicted_df.index.year  # type: ignore[unresolved-attribute]
+    predicted_df["day_of_year"] = predicted_df.index.day_of_year  # type: ignore[unresolved-attribute]
 
     # merge on year and day
     merged_df = (
@@ -105,7 +105,7 @@ def naive_demand_scaling(df: pd.DataFrame) -> pd.DataFrame:
     df["demand"] *= A.HoursPerDay
 
     # Calculate yearly totals and scale each year independently
-    df["year"] = df.index.year
+    df["year"] = df.index.year  # type: ignore[unresolved-attribute]
     yearly_totals = df.groupby("year")["demand"].sum()
     df["yearly_total"] = df["year"].map(yearly_totals)
     scaling_factor = A.EnergyDemand2050 / df["yearly_total"]
@@ -134,9 +134,9 @@ def seasonal_demand_scaling(df: pd.DataFrame, *, filter_ldz: bool = True) -> pd.
     gas_seasonality = pd.DataFrame(data={"demand": gas_seasonality})
     ele_seasonality = pd.DataFrame(data={"demand": ele_seasonality})
 
-    year_counts = gas_seasonality.index.year.value_counts()
+    year_counts = gas_seasonality.index.year.value_counts()  # type: ignore[unresolved-attribute]
     valid_years = year_counts[year_counts >= 365].index  # noqa: PLR2004
-    gas_seasonality = gas_seasonality[gas_seasonality.index.year.isin(valid_years)]
+    gas_seasonality = gas_seasonality[gas_seasonality.index.year.isin(valid_years)]  # type: ignore[unresolved-attribute]
     gas_seasonality = map_years(ele_seasonality, gas_seasonality)
 
     # get the daily heating demand
@@ -182,7 +182,7 @@ def hdd_demand_scaling(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def predicted_demand(
-    mode: DemandMode = "naive",
+    mode: DemandMode = DemandMode.NAIVE,
     historical: HistoricalDemandSource = "era5",
     *,
     filter_ldz: bool = True,
@@ -203,21 +203,21 @@ def predicted_demand(
         ValueError: If the mode is not a valid DemandMode.
     """
     df = historical_demand.historical_electricity_demand(source=historical)
-    if mode == "naive":
+    if mode == DemandMode.NAIVE:
         out = naive_demand_scaling(df)
-    elif mode == "seasonal":
+    elif mode == DemandMode.SEASONAL:
         out = seasonal_demand_scaling(df, filter_ldz=filter_ldz)
-    elif mode == "cb7":
+    elif mode == DemandMode.CB7:
         out = cb7.cb7_demand(A.EnergyDemand2050)[["demand"]]
         # randomly match cb7 demand years to historical years
         if not average_year:
             out = map_years(historical_df=df, predicted_df=out)
-    elif mode == "hdd":
+    elif mode == DemandMode.HDD:
         out = hdd_demand_scaling(df)
     else:
-        raise ValueError(f"Invalid mode. Choose from {DemandMode.__args__}.")
+        raise ValueError(f"Invalid mode. Choose from {[e.value for e in DemandMode]}.")
 
     if average_year:
-        out = out.groupby(out.index.dayofyear).mean()
+        out = out.groupby(out.index.dayofyear).mean()  # type: ignore[unresolved-attribute]
 
     return out
