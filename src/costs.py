@@ -45,8 +45,15 @@ def total_storage_cost(
     return (storage_cost + electrolyser_cost + generation_cost).to(U.GBP)
 
 
-def total_system_cost(
+def total_system_cost(  # noqa: PLR0913
+    *,
+    energy_demand: float,
     renewable_capacity: float,
+    renewable_capacity_factor: float,
+    renewable_lcoe: float,
+    nuclear_capacity: float,
+    nuclear_capacity_factor: float,
+    nuclear_lcoe: float,
     storage_capacity: float,
     electrolyser_power: float,
     generation_capacity: float,
@@ -56,7 +63,13 @@ def total_system_cost(
     Includes renewable energy, storage, electrolysis, and generation costs.
 
     Args:
+        energy_demand: Total energy demand in TWh.
         renewable_capacity: Renewable energy capacity in GW.
+        renewable_capacity_factor: Renewable energy capacity factor (0 to 1).
+        renewable_lcoe: Renewable energy levelized cost of energy (GBP/MWh).
+        nuclear_capacity: Nuclear energy capacity in GW.
+        nuclear_capacity_factor: Nuclear energy capacity factor (0 to 1).
+        nuclear_lcoe: Nuclear energy levelized cost of energy (GBP/MWh).
         storage_capacity: Storage capacity in kWh.
         electrolyser_power: Power of the electrolyser in kW.
         generation_capacity: Generation capacity in kW.
@@ -66,16 +79,16 @@ def total_system_cost(
     """
     renewable_cost = yearly_cost(
         capacity=renewable_capacity,
-        capacity_factor=A.Renewables.AverageCapacityFactor,
-        lcoe=A.Renewables.AverageLCOE,
+        capacity_factor=renewable_capacity_factor,
+        lcoe=renewable_lcoe,
     )
     nuclear_cost = yearly_cost(
-        capacity=A.Nuclear.Capacity,
-        capacity_factor=A.Nuclear.CapacityFactor,
-        lcoe=A.Nuclear.AverageLCOE,
+        capacity=nuclear_capacity,
+        capacity_factor=nuclear_capacity_factor,
+        lcoe=nuclear_lcoe,
     )
     storage_cost = total_storage_cost(storage_capacity, electrolyser_power, generation_capacity)
-    additional_costs = A.AdditionalCosts * A.EnergyDemand2050
+    additional_costs = A.AdditionalCosts * energy_demand
     return (renewable_cost + nuclear_cost + storage_cost + additional_costs).to(U.GBP)
 
 
@@ -94,19 +107,19 @@ def energy_cost(system_cost: float, energy_demand: float) -> float:
     return (system_cost / energy_demand).to(U.GBP / U.MWh)
 
 
-system_cost = total_system_cost(
-    renewable_capacity=220 * U.GW,
-    storage_capacity=165 * U.TWh,
-    electrolyser_power=80 * U.GW,
-    generation_capacity=100 * U.GW,
-)
-print(energy_cost(system_cost, A.EnergyDemand2050))
+if __name__ == "__main__":
+    system_cost = total_system_cost(
+        renewable_capacity=220 * U.GW,
+        storage_capacity=165 * U.TWh,
+        electrolyser_power=80 * U.GW,
+        generation_capacity=100 * U.GW,
+    )
+    print(energy_cost(system_cost, A.EnergyDemand2050))
 
-
-system_cost = total_system_cost(
-    renewable_capacity=250 * U.GW,
-    storage_capacity=67 * U.TWh,
-    electrolyser_power=100 * U.GW,
-    generation_capacity=100 * U.GW,
-)
-print(energy_cost(system_cost, A.EnergyDemand2050))
+    system_cost = total_system_cost(
+        renewable_capacity=250 * U.GW,
+        storage_capacity=67 * U.TWh,
+        electrolyser_power=100 * U.GW,
+        generation_capacity=100 * U.GW,
+    )
+    print(energy_cost(system_cost, A.EnergyDemand2050))
