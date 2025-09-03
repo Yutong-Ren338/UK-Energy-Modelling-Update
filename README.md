@@ -1,16 +1,16 @@
 # UK Energy Modelling with CO2 Removal
 
-A Python-based energy system model for simulating the UK's 2050 net-zero energy transition with integrated Direct Air Capture (DAC) capabilities.
+A simple Python-based energy system model for simulating the UK's 2050 net-zero energy landscape.
 
 ## Overview
 
 This model simulates the UK's future energy system using hourly/daily time series data with the following key capabilities:
 
-- **Renewable energy generation** from wind and solar with realistic ERA5-based capacity factors from Renewables.ninja
-- **Multiple demand scenarios**: Switch between naive scaling, seasonal patterns with heat pump electrification, and CCC CB7 2050 projections
-- **Energy storage systems** with configurable capacity and round-trip efficiency losses
-- **Direct Air Capture (DAC)** integration for CO2 removal using excess renewable energy
-- **Economic analysis**: Cost modeling and optimization capabilities (in development)
+- **Renewable generation** from wind and solar with realistic ERA5-based capacity factors
+- **Multiple demand scenarios**: naive scaling, seasonal scenarios, and CCC CB7 projections
+- **Energy storage systems** with configurable capacity, power and efficiency
+- **Direct Air Capture (DAC)** integration for CO2 removal using excess capacity
+- **Economic analysis**: Cost modeling and optimisation capabilities (in development)
 
 ## Getting Started
 
@@ -39,6 +39,8 @@ uv run ruff format .
 ### Current Capabilities
 - ✅ Core power system simulation with storage
 - ✅ Long & medium-term power storage options
+- ✅ Dispatchable low-carbon generation (gas + CCS)
+- ✅ 40-year backtesting to ensure system robustness
 - ✅ Multiple demand modeling approaches 
 - ✅ Renewable supply modeling with capacity factors
 - ✅ DAC integration for excess energy allocation
@@ -47,7 +49,6 @@ uv run ruff format .
 ### Planned Enhancements
 - 🔄 Hourly time resolution (currently daily)
 - 🔄 Interconnector modeling (28 GW capacity by 2050)
-- 🔄 Dispatchable low-carbon generation (gas + CCS)
 - 🔄 Economic optimization and cost modeling
 
 See `todo.md` for detailed development roadmap.
