@@ -49,7 +49,11 @@ class PowerSystem:
     # - FES 2025 states that transmission losses are around 2% today but increasing to 3% by 2050
     # - DUKES 2024 says that 2023 total losses are around 9%
     TotalLosses = 0.113
-    DispatchableGasCCS = 18 * U.GW
+
+
+class DispatchableGasCCS:
+    Capacity = 18 * U.GW  # CB7 (Table 7.5.1): 38 GW total capacity (shared with generation from hydrogen). FES 2025 (Table 32) has 48.3 GW.
+    LCOE = 180 * U.GBP / U.MWh  # from CB7 (Table 7.5.1): 165-194 £/MWh. Price here includes generation from hydrogen so this is not accurate.
 
 
 # ============================================================================
@@ -84,8 +88,8 @@ class Renewables:
     class LCOE:
         """Levelized Cost of Energy (Source: BEIS, 2023)."""
 
-        Solar = 30.0 * U.GBP / U.MWh
-        OffshoreWind = 41.0 * U.GBP / U.MWh
+        Solar = 30.0 * U.GBP / U.MWh  # CB7 (Table 7.5.1): 27 £/MWh
+        OffshoreWind = 41.0 * U.GBP / U.MWh  # CB7 (Table 7.5.1): 31 £/MWh
         OnshoreWind = 36.0 * U.GBP / U.MWh
 
     # Calculated weighted average capacity factor across all renewable technologies
@@ -135,9 +139,11 @@ class Nuclear:
 # MEDIUM-TERM ENERGY STORAGE
 # ============================================================================
 class MediumTermStorage:
-    Power = 7 * U.GW  # Power capacity of the medium-term storage system
+    # from CB7 (Table 7.5.1)
+    Power = 7 * U.GW  # FES 2025 (Table 28) has 39.3 GW
     Capacity = 0.433 * U.TWh  # Energy capacity of the medium-term storage system
     RoundTripEfficiency = 0.70  # Round-trip efficiency for medium-term storage
+    LCOE = 100 * U.GBP / U.MWh  # just a placeholder for now, need to update
 
 
 # ============================================================================
@@ -165,7 +171,7 @@ class HydrogenStorage:
         # For Capex, H21 NOE assumes £325M for 1.22 TWh. CS Smith et al (2023)
         # take the midpoint of 1-2x this number, which is £399.59M per TWh.
 
-        Capacity = 70.0 * U.TWh  # Maximum storage capacity (CB7 has 5-9 TWh)
+        Capacity = 70.0 * U.TWh  # CB7 has 5-9 TWh, FES 2025 (Table 38) has 12 TWh.
         Efficiency = 0.407  # Round-trip efficiency (electrolysis * generation efficiencies
         Capex = 400 * U.GBP / U.MWh
         Opex = Capex * 0.015
@@ -176,7 +182,7 @@ class HydrogenStorage:
     class Generation:
         """Parameters for electricity generation from stored hydrogen."""
 
-        Power = 100 * U.GW
+        Power = 100 * U.GW  # FES 2025 (Table 29) has 16.5 GW (+ constraints on combined capacity with gas+CCS, see above)
         Efficiency = 0.55  # Converting stored hydrogen back to electricity
         Capex = 425 / GBPToUSD * U.GBP / U.kW
         Opex = Capex * 0.015

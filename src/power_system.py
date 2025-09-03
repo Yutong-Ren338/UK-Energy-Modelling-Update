@@ -83,7 +83,7 @@ class PowerSystem:
 
         # Set gas CCS parameters with defaults from assumptions
         if gas_ccs_capacity is None:
-            gas_ccs_capacity = A.PowerSystem.DispatchableGasCCS
+            gas_ccs_capacity = A.DispatchableGasCCS.Capacity
 
         assert gas_ccs_capacity.units == U.GW, "Gas CCS capacity must be in GW"
 
@@ -251,16 +251,21 @@ class PowerSystem:
             "gas_ccs_capacity_factor": gas_ccs_capacity_factor,
         }
 
-    def calculate_power_system_cost(self) -> Quantity:
-        """Calculate the total cost of the power system.
+    def calculate_power_system_cost(self, sim_df: pd.DataFrame | None = None) -> Quantity:
+        """Calculate the total cost of the power system including operational costs.
 
         Uses the total_system_cost function from costs.py with parameters from the power system
-        and assumptions.py for any missing values.
+        and assumptions.py for any missing values. If simulation results are provided, adds
+        operational costs for gas CCS and medium-term storage based on energy usage.
+
+        Args:
+            sim_df: Optional simulation results DataFrame to calculate operational costs.
 
         Returns:
             Total system cost in GBP.
         """
-        return total_system_cost(
+        # Calculate base system cost (capital costs)
+        base_cost = total_system_cost(
             energy_demand=A.EnergyDemand2050,
             renewable_capacity=self.renewable_capacity * U.GW,
             renewable_capacity_factor=A.Renewables.AverageCapacityFactor,
@@ -273,8 +278,29 @@ class PowerSystem:
             generation_capacity=self.hydrogen_generation_power * U.GW,
         )
 
-    def calculate_energy_cost(self) -> Quantity:
-        return energy_cost(self.calculate_power_system_cost(), A.EnergyDemand2050)
+        # If no simulation results provided, return base cost only
+        if sim_df is None:
+            return base_cost
+
+        # Calculate additional operational costs based on energy usage
+        additional_costs = 0 * U.GBP
+
+        # Gas CCS operational cost
+        gas_ccs_column = f"gas_ccs_energy (TWh),RC={int(self.renewable_capacity)}GW"
+        annual_gas_ccs_energy = sim_df[gas_ccs_column].mean() * 365  # Convert daily average to annual
+        gas_ccs_cost = annual_gas_ccs_energy * A.DispatchableGasCCS.LCOE
+        additional_costs += gas_ccs_cost
+
+        # Medium-term storage operational cost (based on energy throughput)
+        medium_storage_column = f"energy_into_medium_storage (TWh),RC={int(self.renewable_capacity)}GW"
+        annual_medium_storage_energy = sim_df[medium_storage_column].mean() * 365  # Convert daily average to annual
+        medium_storage_cost = annual_medium_storage_energy * A.MediumTermStorage.LCOE
+        additional_costs += medium_storage_cost
+
+        return base_cost + additional_costs
+
+    def calculate_energy_cost(self, sim_df: pd.DataFrame | None = None) -> Quantity:
+        return energy_cost(self.calculate_power_system_cost(sim_df), A.EnergyDemand2050)
 
     @staticmethod
     def format_simulation_results(results: dict) -> str:
@@ -389,7 +415,7 @@ class PowerSystem:
             f"• Hydrogen Storage: {self.hydrogen_storage_capacity:.0f} TWh, {self.electrolyser_power:.0f} GW\n"
             f"• Gas CCS: {self.gas_ccs_capacity:.0f} GW\n"
             f"• DAC: {self.dac_capacity:.1f} GW\n"
-            f"• Energy cost: {self.calculate_energy_cost():~0.1f}\n"
+            f"• Energy cost: {self.calculate_energy_cost(sim_df):~0.1f}\n"
             f"\nResults:\n"
             f"{self.format_simulation_results(results)}"
         )
