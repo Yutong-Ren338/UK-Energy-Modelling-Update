@@ -159,6 +159,7 @@ def test_analyze_simulation_results_structure(power_system_model: PowerSystem, s
         "minimum_medium_storage",
         "minimum_hydrogen_storage",
         "annual_dac_energy",
+        "annual_co2_removals",
         "dac_capacity_factor",
         "curtailed_energy",
         "annual_gas_ccs_energy",
@@ -171,6 +172,7 @@ def test_analyze_simulation_results_structure(power_system_model: PowerSystem, s
     assert isinstance(results["minimum_medium_storage"], Quantity)
     assert isinstance(results["minimum_hydrogen_storage"], Quantity)
     assert isinstance(results["annual_dac_energy"], Quantity)
+    assert isinstance(results["annual_co2_removals"], Quantity)
     assert isinstance(results["dac_capacity_factor"], float)
     assert isinstance(results["curtailed_energy"], Quantity)
     assert isinstance(results["annual_gas_ccs_energy"], Quantity)

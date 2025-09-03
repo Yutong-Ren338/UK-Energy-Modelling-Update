@@ -359,7 +359,6 @@ class PowerSystem:
             linewidth=0.5,
             label="Hydrogen Storage",
         )
-        ax2.plot(sim_df[f"dac_energy (TWh),RC={self.renewable_capacity}GW"], color="red", linewidth=0.5, label="DAC Energy")
         ax2.plot(
             sim_df[f"gas_ccs_energy (TWh),RC={self.renewable_capacity}GW"],
             color="purple",
@@ -372,6 +371,7 @@ class PowerSystem:
             linewidth=0.5,
             label="Medium Storage",
         )
+        ax2.plot(sim_df[f"dac_energy (TWh),RC={self.renewable_capacity}GW"], color="red", linewidth=0.5, label="DAC Energy")
         ax2.set_xlabel("Day in 40 Years")
         ax2.set_ylabel("Energy (TWh)")
         ax2.legend(loc="upper right", fontsize=10, facecolor="white", edgecolor="gray", frameon=True, framealpha=0.9)
@@ -388,7 +388,7 @@ class PowerSystem:
             f"• Medium Storage: {self.medium_storage_capacity:.1f} TWh, {self.medium_storage_power:.0f} GW\n"
             f"• Hydrogen Storage: {self.hydrogen_storage_capacity:.0f} TWh, {self.electrolyser_power:.0f} GW\n"
             f"• Gas CCS: {self.gas_ccs_capacity:.0f} GW\n"
-            f"• DAC: {self.dac_capacity:.0f} GW\n"
+            f"• DAC: {self.dac_capacity:.1f} GW\n"
             f"• Energy cost: {self.calculate_energy_cost():~0.1f}\n"
             f"\nResults:\n"
             f"{self.format_simulation_results(results)}"
