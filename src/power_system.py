@@ -7,6 +7,7 @@ from matplotlib import gridspec
 from pint import Quantity
 
 import src.assumptions as A
+from src.costs import energy_cost, total_system_cost
 from src.power_system_core import SimulationParameters, simulate_power_system_core
 from src.units import Units as U
 
@@ -231,6 +232,8 @@ class PowerSystem:
         minimum_medium_storage = sim_df[medium_storage_column].min()
         minimum_hydrogen_storage = sim_df[hydrogen_storage_column].min()
         annual_dac_energy = sim_df[dac_column].mean() * 365
+        # Calculate CO2 removals using pre-calculated DAC energy cost conversion
+        annual_co2_removals = annual_dac_energy / A.DAC.EnergyCost.MediumTWhPerMtCO2
         # Calculate capacity factor as actual usage vs maximum possible daily energy
         dac_capacity_factor = (sim_df[dac_column] > 0).mean()  # Simplified calculation based on operating days
         curtailed_energy = sim_df[unused_column].mean() * 365
@@ -241,23 +244,50 @@ class PowerSystem:
             "minimum_medium_storage": minimum_medium_storage,
             "minimum_hydrogen_storage": minimum_hydrogen_storage,
             "annual_dac_energy": annual_dac_energy,
+            "annual_co2_removals": annual_co2_removals,
             "dac_capacity_factor": dac_capacity_factor,
             "curtailed_energy": curtailed_energy,
             "annual_gas_ccs_energy": annual_gas_ccs_energy,
             "gas_ccs_capacity_factor": gas_ccs_capacity_factor,
         }
 
+    def calculate_power_system_cost(self) -> Quantity:
+        """Calculate the total cost of the power system.
+
+        Uses the total_system_cost function from costs.py with parameters from the power system
+        and assumptions.py for any missing values.
+
+        Returns:
+            Total system cost in GBP.
+        """
+        return total_system_cost(
+            energy_demand=A.EnergyDemand2050,
+            renewable_capacity=self.renewable_capacity * U.GW,
+            renewable_capacity_factor=A.Renewables.AverageCapacityFactor,
+            renewable_lcoe=A.Renewables.AverageLCOE,
+            nuclear_capacity=A.Nuclear.Capacity,
+            nuclear_capacity_factor=A.Nuclear.CapacityFactor,
+            nuclear_lcoe=A.Nuclear.AverageLCOE,
+            storage_capacity=self.hydrogen_storage_capacity * U.TWh,
+            electrolyser_power=self.electrolyser_power * U.GW,
+            generation_capacity=self.hydrogen_generation_power * U.GW,
+        )
+
+    def calculate_energy_cost(self) -> Quantity:
+        return energy_cost(self.calculate_power_system_cost(), A.EnergyDemand2050)
+
     @staticmethod
     def format_simulation_results(results: dict) -> str:
         """Return simulation results in a formatted way."""
         return (
-            f"minimum medium storage is {results['minimum_medium_storage']:.1f}\n"
-            f"minimum hydrogen storage is {results['minimum_hydrogen_storage']:.1f}\n"
-            f"DAC energy is {results['annual_dac_energy']:.1f}\n"
-            f"DAC Capacity Factor is {results['dac_capacity_factor']:.1%}\n"
-            f"Gas CCS energy is {results['annual_gas_ccs_energy']:.1f}\n"
-            f"Gas CCS Capacity Factor is {results['gas_ccs_capacity_factor']:.1%}\n"
-            f"Curtailed energy is {results['curtailed_energy']:.1f}"
+            f"• Minimum medium storage: {results['minimum_medium_storage']:~0.1f}\n"
+            f"• Minimum hydrogen storag:  {results['minimum_hydrogen_storage']:~0.1f}\n"
+            f"• DAC energy: {results['annual_dac_energy']:~0.1f}\n"
+            f"• DAC CO2 removals: {results['annual_co2_removals']:~0.1f}\n"
+            f"• DAC Capacity Factor: {results['dac_capacity_factor']:.1%}\n"
+            f"• Gas CCS energy: {results['annual_gas_ccs_energy']:~0.1f}\n"
+            f"• Gas CCS Capacity Factor: {results['gas_ccs_capacity_factor']:.1%}\n"
+            f"• Curtailed energy: {results['curtailed_energy']:~0.1f}"
         )
 
     def print_simulation_results(self, results: dict | None) -> None:
@@ -355,12 +385,11 @@ class PowerSystem:
             f"Parameters:\n"
             f"• Demand Mode: {demand_mode}\n"
             f"• Renewables: {self.renewable_capacity:.0f} GW\n"
-            f"• Medium Storage: {self.medium_storage_capacity:.1f} TWh\n"
-            f"• Medium Storage Power: {self.medium_storage_power:.0f} GW\n"
-            f"• Hydrogen Storage: {self.hydrogen_storage_capacity:.0f} TWh\n"
-            f"• Electrolyser Power: {self.electrolyser_power:.0f} GW\n"
-            f"• Gas CCS Power: {self.gas_ccs_capacity:.0f} GW\n"
+            f"• Medium Storage: {self.medium_storage_capacity:.1f} TWh, {self.medium_storage_power:.0f} GW\n"
+            f"• Hydrogen Storage: {self.hydrogen_storage_capacity:.0f} TWh, {self.electrolyser_power:.0f} GW\n"
+            f"• Gas CCS: {self.gas_ccs_capacity:.0f} GW\n"
             f"• DAC: {self.dac_capacity:.0f} GW\n"
+            f"• Energy cost: {self.calculate_energy_cost():~0.1f}\n"
             f"\nResults:\n"
             f"{self.format_simulation_results(results)}"
         )
