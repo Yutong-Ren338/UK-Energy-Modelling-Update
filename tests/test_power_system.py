@@ -400,3 +400,75 @@ def test_medium_term_storage_functionality(sample_data: pd.DataFrame, *, only_da
     # Medium storage minimum should be 0 when disabled, and potentially positive when enabled
     assert analysis_without_medium["minimum_medium_storage"] == 0 * U.TWh, "Medium storage minimum should be 0 when disabled"
     assert analysis_with_medium["minimum_medium_storage"] >= 0 * U.TWh, "Medium storage minimum should be non-negative when enabled"
+
+
+def test_calculate_power_system_cost(power_system_model: PowerSystem) -> None:
+    """Test that power system cost calculation returns reasonable results."""
+    # Calculate the cost
+    total_cost = power_system_model.calculate_power_system_cost()
+
+    # Check that the result is a valid quantity with GBP units
+    assert isinstance(total_cost, Quantity), "Cost should be a pint Quantity"
+    assert total_cost.units == U.GBP, "Cost should be in GBP units"
+
+    # Check that the cost is positive and reasonable (not zero, not absurdly large)
+    max_reasonable_cost = 1e15  # 1 quadrillion GBP upper bound for sanity check
+    assert total_cost.magnitude > 0, "System cost should be positive"
+    assert total_cost.magnitude < max_reasonable_cost, "System cost should be reasonable"
+
+    # Test with different renewable capacities to ensure cost scaling
+    smaller_system = PowerSystem(
+        renewable_capacity=100 * U.GW,
+        hydrogen_storage_capacity=30 * U.TWh,
+        electrolyser_power=25 * U.GW,
+        dac_capacity=15 * U.GW,
+    )
+
+    larger_system = PowerSystem(
+        renewable_capacity=500 * U.GW,
+        hydrogen_storage_capacity=100 * U.TWh,
+        electrolyser_power=75 * U.GW,
+        dac_capacity=50 * U.GW,
+    )
+
+    smaller_cost = smaller_system.calculate_power_system_cost()
+    larger_cost = larger_system.calculate_power_system_cost()
+
+    # Larger system should generally cost more (though this is not strictly guaranteed due to efficiency effects)
+    assert larger_cost.magnitude > smaller_cost.magnitude, "Larger system should generally cost more than smaller system"
+
+
+def test_energy_cost(power_system_model: PowerSystem) -> None:
+    """Test that power system cost calculation returns reasonable results."""
+    # Calculate the cost
+    total_cost = power_system_model.calculate_energy_cost()
+
+    # Check that the result is a valid quantity with GBP units
+    assert isinstance(total_cost, Quantity), "Cost should be a pint Quantity"
+    assert total_cost.units == U.GBP / U.MWh, "Cost should be in GBP/MWh units"
+
+    # Check that the cost is positive and reasonable (not zero, not absurdly large)
+    max_reasonable_cost = 1e15  # 1 quadrillion GBP upper bound for sanity check
+    assert total_cost.magnitude > 0, "System cost should be positive"
+    assert total_cost.magnitude < max_reasonable_cost, "System cost should be reasonable"
+
+    # Test with different renewable capacities to ensure cost scaling
+    smaller_system = PowerSystem(
+        renewable_capacity=100 * U.GW,
+        hydrogen_storage_capacity=30 * U.TWh,
+        electrolyser_power=25 * U.GW,
+        dac_capacity=15 * U.GW,
+    )
+
+    larger_system = PowerSystem(
+        renewable_capacity=500 * U.GW,
+        hydrogen_storage_capacity=100 * U.TWh,
+        electrolyser_power=75 * U.GW,
+        dac_capacity=50 * U.GW,
+    )
+
+    smaller_cost = smaller_system.calculate_energy_cost()
+    larger_cost = larger_system.calculate_energy_cost()
+
+    # Larger system should generally cost more (though this is not strictly guaranteed due to efficiency effects)
+    assert larger_cost.magnitude > smaller_cost.magnitude, "Larger system should generally cost more than smaller system"
