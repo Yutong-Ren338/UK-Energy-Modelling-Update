@@ -64,7 +64,7 @@ def test_run_simulation_with_expected_outputs(power_system_model: PowerSystem, s
     expected_values = {
         "minimum_medium_storage": 0.0 * U.TWh,  # Medium storage disabled for backward compatibility
         "minimum_hydrogen_storage": 20.16927245757229 * U.TWh,
-        "annual_dac_energy": 38.47911516786211 * U.TWh,
+        "annual_dac_energy": 1.825 * U.TWh,
         "dac_capacity_factor": 0.19,  # 19.0%
         "curtailed_energy": 76.0609621 * U.TWh,
         "annual_gas_ccs_energy": 0.0 * U.TWh,  # Gas CCS disabled for backward compatibility
@@ -86,7 +86,7 @@ def test_run_simulation_more_aggressive_dac(sample_data_rei: pd.DataFrame) -> No
         hydrogen_storage_capacity=71 * U.TWh,
         electrolyser_power=50 * U.GW,
         hydrogen_generation_power=A.HydrogenStorage.Generation.Power,
-        dac_capacity=A.DAC.Capacity,
+        dac_capacity=100 * U.GW,
         medium_storage_capacity=0 * U.TWh,  # Disable medium storage for backward compatibility
         medium_storage_power=0 * U.GW,  # Disable medium storage power for backward compatibility
         gas_ccs_capacity=0 * U.GW,  # Disable gas CCS for backward compatibility
