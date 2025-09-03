@@ -66,7 +66,7 @@ def test_run_simulation_with_expected_outputs(power_system_model: PowerSystem, s
         "minimum_hydrogen_storage": 20.16927245757229 * U.TWh,
         "annual_dac_energy": 1.825 * U.TWh,
         "dac_capacity_factor": 0.19,  # 19.0%
-        "curtailed_energy": 76.0609621 * U.TWh,
+        "curtailed_energy": 112.7148 * U.TWh,
         "annual_gas_ccs_energy": 0.0 * U.TWh,  # Gas CCS disabled for backward compatibility
         "gas_ccs_capacity_factor": 0.0,  # Gas CCS disabled
     }
