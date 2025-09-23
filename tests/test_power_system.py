@@ -191,6 +191,8 @@ def test_simulation_with_custom_renewable_capacity(sample_data: pd.DataFrame) ->
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
         hydrogen_generation_power=A.HydrogenStorage.Generation.Power,
         dac_capacity=A.DAC.Capacity,
+        medium_storage_capacity=A.MediumTermStorage.Capacity,
+        medium_storage_power=A.MediumTermStorage.Power,
     )
     sim_df = custom_model.run_simulation(sample_data)
     assert sim_df is not None
@@ -261,8 +263,8 @@ def test_plot_simulation_results(demand_mode: DemandMode) -> None:
         electrolyser_power=A.HydrogenStorage.Electrolysis.Power,
         hydrogen_generation_power=A.HydrogenStorage.Generation.Power,
         dac_capacity=A.DAC.Capacity,
-        medium_storage_capacity=0 * U.TWh,  # Disable medium storage for backward compatibility
-        medium_storage_power=0 * U.GW,  # Disable medium storage power for backward compatibility
+        medium_storage_capacity=A.MediumTermStorage.Capacity,
+        medium_storage_power=A.MediumTermStorage.Power,
     )
 
     # Run simulation

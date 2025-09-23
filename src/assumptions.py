@@ -171,7 +171,7 @@ class HydrogenStorage:
         # For Capex, H21 NOE assumes £325M for 1.22 TWh. CS Smith et al (2023)
         # take the midpoint of 1-2x this number, which is £399.59M per TWh.
 
-        Capacity = 70.0 * U.TWh  # CB7 has 5-9 TWh, FES 2025 (Table 38) has 12 TWh.
+        Capacity = 50.0 * U.TWh  # CB7 has 5-9 TWh, FES 2025 (Table 38) has 12 TWh.
         Efficiency = 0.407  # Round-trip efficiency (electrolysis * generation efficiencies
         Capex = 400 * U.GBP / U.MWh
         Opex = Capex * 0.015
