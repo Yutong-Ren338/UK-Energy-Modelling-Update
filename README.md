@@ -33,6 +33,9 @@ uv run ruff check .
 uv run ruff format .
 ```
 
+An example simulation run can be found below:
+
+<img width="4534" height="1834" alt="image" src="https://github.com/user-attachments/assets/8e508380-4123-4db9-aacf-f4b38843b2ad" />
 
 ## Development Status
 
