@@ -1,3 +1,4 @@
+import functools
 from pathlib import Path
 
 import pandas as pd
@@ -6,6 +7,7 @@ import xarray as xr
 DATA_DIR = Path(__file__).parents[2] / "data"
 
 
+@functools.cache
 def get_2024_data(generation_type: str = "solar", country_code: str = "UK", resample: str | None = None) -> pd.DataFrame:
     """ERA5 data from https://doi.org/10.5281/zenodo.12634069.
 
@@ -43,6 +45,7 @@ def get_2024_data(generation_type: str = "solar", country_code: str = "UK", resa
     return df
 
 
+@functools.cache
 def get_2021_data(generation_type: str = "solar", country_code: str = "UK", resample: str | None = None) -> pd.DataFrame:
     """ERA5 data from https://doi.org/10.17864/1947.000321.
 
