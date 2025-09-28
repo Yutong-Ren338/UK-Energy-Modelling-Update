@@ -7,6 +7,19 @@ DATA_DIR = Path(__file__).parents[2] / "data"
 
 
 def get_2024_data(generation_type: str = "solar", country_code: str = "UK", resample: str | None = None) -> pd.DataFrame:
+    """ERA5 data from https://doi.org/10.5281/zenodo.12634069.
+
+    Args:
+        generation_type: "solar", "onshore_wind", or "offshore_wind"
+        country_code: ISO 3166-1 alpha-2 country code, e.g. "GB", "DE", "FR" (UK is converted to GB)
+        resample: resample frequency, e.g. "D" for daily, "ME" for monthly, "YE" for yearly. If None, no resampling is done.
+
+    Returns:
+        DataFrame with datetime index and "capacity_factor" column.
+
+    Raises:
+        ValueError: if generation_type is not one of the expected values.
+    """
     if country_code == "UK":
         country_code = "GB"
 
@@ -31,6 +44,19 @@ def get_2024_data(generation_type: str = "solar", country_code: str = "UK", resa
 
 
 def get_2021_data(generation_type: str = "solar", country_code: str = "UK", resample: str | None = None) -> pd.DataFrame:
+    """ERA5 data from https://doi.org/10.17864/1947.000321.
+
+    Args:
+        generation_type: "solar", "onshore_wind", or "offshore_wind"
+        country_code: NUTS0 country code, e.g. "UK", "DE", "FR"
+        resample: resample frequency, e.g. "D" for daily, "ME" for monthly, "YE" for yearly. If None, no resampling is done.
+
+    Returns:
+        DataFrame with datetime index and "capacity_factor" column.
+
+    Raises:
+        ValueError: if generation_type is not one of the expected values.
+    """
     base = DATA_DIR / "ERA5_2021"
     if generation_type == "solar":
         path = base / "solar_power_capacity_factor" / "NUTS_0_sp_historical.nc"

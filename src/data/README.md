@@ -15,3 +15,5 @@ uv run src/data/scrape_gas_demand.py
 | NTS | National Transmission System gas demand data | [Website](https://data.nationalgas.com/) |
 | CCC CB7 | Various assumptions including 2050 demand | [Report](https://www.theccc.org.uk/publication/the-seventh-carbon-budget/) |
 | CCC CB7 | Hourly electricity demand data | [Methodology Report](https://www.theccc.org.uk/publication/methodology-report-uk-northern-ireland-wales-and-scotland-carbon-budget-advice/) |
+| ERA5 2021 | Meteorological data (1950-2020) | [Dataset](https://doi.org/10.17864/1947.000321) |
+| ERA5 2024 | Meteorological data (1940-2023) | [Dataset](https://doi.org/10.5281/zenodo.12634069) |
