@@ -5,7 +5,7 @@ from src.data.era5 import get_2021_data, get_2024_data
 from src.units import Units as U
 
 
-def get_renewable_capacity_factors(source: str = "renewable_ninja", **kwargs: dict) -> pd.DataFrame:
+def get_renewable_capacity_factors(source: str = "renewable_ninja", **kwargs) -> pd.DataFrame:  # noqa: ANN003
     """Get renewable capacity factors for solar, onshore wind, and offshore wind.
 
     Args:
