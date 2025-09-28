@@ -1,8 +1,11 @@
+import os
 from pathlib import Path
 
 import numpy as np
 
 from src import matplotlib_style  # noqa: F401
+
+IN_CI = os.environ.get("GITHUB_ACTIONS")
 
 # test artifacts
 OUTPUT_DIR = Path("tests/output")

@@ -1,6 +1,12 @@
+import matplotlib.pyplot as plt
 import pandas as pd
+import pytest
 
 from src.data.renewable_capacity_factors import get_renewable_capacity_factors
+from tests.config import IN_CI, OUTPUT_DIR
+
+OUTPUT_PATH = OUTPUT_DIR / "data" / "renewable_capacity_factors"
+OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 
 
 def test_get_renewable_capacity_factors() -> None:
@@ -49,3 +55,18 @@ def test_get_renewable_capacity_factors_resampling() -> None:
 
     # Check that index frequency matches resampling rule
     assert daily_result.index.freq == pd.Timedelta(days=1)  # type: ignore[possibly-unbound-attribute]
+
+
+@pytest.mark.skipif(IN_CI, reason="Skip in CI")
+@pytest.mark.parametrize("generation_type", ["solar", "onshore", "offshore"])
+def test_plot_all_three(generation_type: str) -> None:
+    plt.figure()
+    for source in ["era5_2021", "era5_2024", "renewable_ninja"]:
+        df = get_renewable_capacity_factors(source=source, resample="M")[[generation_type]]
+        plt.plot(df[generation_type], label=source)
+        plt.ylabel("Capacity Factor")
+        plt.ylim(0, 1)
+        plt.xlabel("Date")
+        plt.legend()
+    plt.savefig(OUTPUT_PATH / f"capacity_factors_{generation_type}.png")
+    plt.close()

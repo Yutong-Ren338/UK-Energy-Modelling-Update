@@ -1,17 +1,13 @@
-import os
-
 import matplotlib.pyplot as plt
 import pandas as pd
 import pytest
 
 from src import matplotlib_style  # noqa: F401
 from src.data.era5 import get_2021_data, get_2024_data
-from tests.config import OUTPUT_DIR
+from tests.config import IN_CI, OUTPUT_DIR
 
 OUTPUT_PATH = OUTPUT_DIR / "data" / "capacity_factors"
 OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
-
-IN_CI = os.environ.get("GITHUB_ACTIONS")
 
 
 def _make_plot(df_a: pd.DataFrame, df_b: pd.DataFrame, title: str, ylabel: str, output_filename: str) -> None:
