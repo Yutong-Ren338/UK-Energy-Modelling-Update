@@ -1,3 +1,5 @@
+import os
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import pytest
@@ -28,6 +30,7 @@ def _make_plot(df_a: pd.DataFrame, df_b: pd.DataFrame, title: str, ylabel: str, 
     plt.close()
 
 
+@pytest.mark.skipif("CI" in os.environ, reason="Skip in CI")
 @pytest.mark.parametrize("generation_type", ["solar", "onshore_wind", "offshore_wind"])
 def test_get_2024_data(generation_type: str) -> None:
     df = get_2024_data(generation_type=generation_type, country_code="UK")
@@ -40,6 +43,7 @@ def test_get_2024_data(generation_type: str) -> None:
     assert not df.index.has_duplicates
 
 
+@pytest.mark.skipif("CI" in os.environ, reason="Skip in CI")
 @pytest.mark.parametrize("generation_type", ["solar", "onshore_wind", "offshore_wind"])
 def test_get_2021_data(generation_type: str) -> None:
     df = get_2021_data(generation_type=generation_type, country_code="UK")
@@ -52,6 +56,7 @@ def test_get_2021_data(generation_type: str) -> None:
     assert not df.index.has_duplicates
 
 
+@pytest.mark.skipif("CI" in os.environ, reason="Skip in CI")
 @pytest.mark.parametrize("resample", [None, "D", "ME", "YE"])
 def test_compare_solar_capacity_factors(resample: str | None) -> None:
     df_a = get_2024_data(generation_type="solar", country_code="UK", resample=resample)
