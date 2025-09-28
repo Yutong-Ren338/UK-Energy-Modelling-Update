@@ -62,7 +62,7 @@ def test_get_renewable_capacity_factors_resampling() -> None:
 def test_plot_all_three(generation_type: str) -> None:
     plt.figure()
     for source in ["era5_2021", "era5_2024", "renewable_ninja"]:
-        df = get_renewable_capacity_factors(source=source, resample="M")[[generation_type]]
+        df = get_renewable_capacity_factors(source=source, resample="ME")[[generation_type]]
         plt.plot(df[generation_type], label=source)
         plt.ylabel("Capacity Factor")
         plt.ylim(0, 1)
