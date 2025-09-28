@@ -8,3 +8,5 @@
 *.zip
 __pycache__/
 *.csv
+*.txt
+*.text*
