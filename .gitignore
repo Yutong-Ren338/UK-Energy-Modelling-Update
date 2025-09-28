@@ -4,3 +4,7 @@
 *.xlsx
 *.nbc
 *.nbi
+*.nc
+*.zip
+__pycache__/
+*.csv

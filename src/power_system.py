@@ -307,7 +307,7 @@ class PowerSystem:
         """Return simulation results in a formatted way."""
         return (
             f"• Minimum medium storage: {results['minimum_medium_storage']:~0.1f}\n"
-            f"• Minimum hydrogen storag:  {results['minimum_hydrogen_storage']:~0.1f}\n"
+            f"• Minimum hydrogen storage:  {results['minimum_hydrogen_storage']:~0.1f}\n"
             f"• DAC energy: {results['annual_dac_energy']:~0.1f}\n"
             f"• DAC CO2 removals: {results['annual_co2_removals']:~0.1f}\n"
             f"• DAC Capacity Factor: {results['dac_capacity_factor']:.1%}\n"
