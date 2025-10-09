@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import pytest
 
 import src.assumptions as A
 from src import (
@@ -9,7 +10,7 @@ from src import (
 from src.data import renewable_capacity_factors
 from src.demand_model import DemandMode
 from src.units import Units as U
-from tests.config import OUTPUT_DIR
+from tests.config import IN_CI, OUTPUT_DIR
 
 OUTPUT_PATH = OUTPUT_DIR / "supply_model"
 OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
@@ -150,3 +151,51 @@ def test_unmet_demand_by_month() -> None:
     plt.legend()
     plt.savefig(OUTPUT_PATH / "unmet_demand_by_month.png")
     plt.close()
+
+
+@pytest.mark.skipif(IN_CI, reason="Skip in CI - requires full data")
+def test_get_surplus_days_for_country() -> None:
+    """Test get_surplus_days_for_country function."""
+    # Test with a known country
+    surplus_days = supply_model.get_surplus_days_for_country(source="era5_2021", country="France", percentile=90)
+
+    # Check that we get a non-empty DataFrame
+    assert not surplus_days.empty, "Surplus days DataFrame should not be empty"
+
+    # Check that it has the correct country column
+    assert "France" in surplus_days.columns, "DataFrame should have France column"
+
+    # Check that values are 0 or 1 (binary)
+    assert surplus_days["France"].isin([0, 1]).all(), "Values should be binary (0 or 1)"
+
+    # Check that we have some surplus days (not all zeros)
+    assert surplus_days["France"].sum() > 0, "Should have some surplus days"
+
+    # Test with invalid country - should raise ValueError
+    with pytest.raises(ValueError, match="Country InvalidCountry not configured"):
+        supply_model.get_surplus_days_for_country(source="era5_2021", country="InvalidCountry", percentile=90)
+
+
+@pytest.mark.skipif(IN_CI, reason="Skip in CI - requires full data")
+def test_get_available_imports() -> None:
+    """Test get_available_imports function."""
+    imports = supply_model.get_available_imports(source="era5_2021")
+
+    # Check that we get a non-empty DataFrame
+    assert not imports.empty, "Imports DataFrame should not be empty"
+
+    # Check that it has the total column
+    assert "total" in imports.columns, "DataFrame should have total column"
+
+    # Check that all values have the correct units (should be GW)
+    for col in imports.columns:
+        assert str(imports[col].dtype).startswith("pint["), f"Column {col} should have pint units"
+        # Extract the unit from the dtype string
+        unit_str = str(imports[col].dtype).split("[")[1].rstrip("]")
+        assert "gigawatt" in unit_str.lower() or "gw" in unit_str.lower(), f"Column {col} should have GW units, got {unit_str}"
+
+    # Check that total is sum of individual countries
+    country_columns = [col for col in imports.columns if col != "total"]
+    if country_columns:  # Only check if we have country columns
+        calculated_total = imports[country_columns].sum(axis=1)
+        assert (imports["total"] == calculated_total).all(), "Total should equal sum of individual countries"

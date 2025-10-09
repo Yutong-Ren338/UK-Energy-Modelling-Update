@@ -6,14 +6,24 @@ import xarray as xr
 
 DATA_DIR = Path(__file__).parents[2] / "data"
 
+COUNTRY_MAP = {
+    "France": "FR",
+    "Ireland": "IE",
+    "Netherlands": "NL",
+    "Germany": "DE",
+    "Belgium": "BE",
+    "Denmark": "DK",
+    "Norway": "NO",
+}
+
 
 @functools.cache
-def get_2024_data(generation_type: str = "solar", country_code: str = "UK", resample: str | None = None) -> pd.DataFrame:
+def get_2024_data(generation_type: str = "solar", country: str = "UK", resample: str | None = None) -> pd.DataFrame:
     """ERA5 data from https://doi.org/10.5281/zenodo.12634069.
 
     Args:
         generation_type: "solar", "onshore_wind", or "offshore_wind"
-        country_code: ISO 3166-1 alpha-2 country code, e.g. "GB", "DE", "FR" (UK is converted to GB)
+        country: ISO 3166-1 alpha-2 country code, e.g. "GB", "DE", "FR" (UK is converted to GB)
         resample: resample frequency, e.g. "D" for daily, "ME" for monthly, "YE" for yearly. If None, no resampling is done.
 
     Returns:
@@ -22,16 +32,19 @@ def get_2024_data(generation_type: str = "solar", country_code: str = "UK", resa
     Raises:
         ValueError: if generation_type is not one of the expected values.
     """
-    if country_code == "UK":
-        country_code = "GB"
+    if country == "UK":
+        country = "GB"
+
+    if country in COUNTRY_MAP:
+        country = COUNTRY_MAP[country]
 
     base = DATA_DIR / "ERA5_2024"
     if generation_type == "solar":
-        path = base / "solar_capacity_factor" / f"{country_code}__ERA5__solar__capacity_factor_time_series.nc"
+        path = base / "solar_capacity_factor" / f"{country}__ERA5__solar__capacity_factor_time_series.nc"
     elif generation_type == "onshore_wind":
-        path = base / "wind_capacity_factor" / f"{country_code}__ERA5__wind__capacity_factor_time_series__onshore.nc"
+        path = base / "wind_capacity_factor" / f"{country}__ERA5__wind__capacity_factor_time_series__onshore.nc"
     elif generation_type == "offshore_wind":
-        path = base / "wind_capacity_factor" / f"{country_code}__ERA5__wind__capacity_factor_time_series__offshore.nc"
+        path = base / "wind_capacity_factor" / f"{country}__ERA5__wind__capacity_factor_time_series__offshore.nc"
     else:
         raise ValueError(f"Unknown generation type: {generation_type}")
 
@@ -46,12 +59,12 @@ def get_2024_data(generation_type: str = "solar", country_code: str = "UK", resa
 
 
 @functools.cache
-def get_2021_data(generation_type: str = "solar", country_code: str = "UK", resample: str | None = None) -> pd.DataFrame:
+def get_2021_data(generation_type: str = "solar", country: str = "UK", resample: str | None = None) -> pd.DataFrame:
     """ERA5 data from https://doi.org/10.17864/1947.000321.
 
     Args:
         generation_type: "solar", "onshore_wind", or "offshore_wind"
-        country_code: NUTS0 country code, e.g. "UK", "DE", "FR"
+        country: NUTS0 country code, e.g. "UK", "DE", "FR"
         resample: resample frequency, e.g. "D" for daily, "ME" for monthly, "YE" for yearly. If None, no resampling is done.
 
     Returns:
@@ -60,6 +73,9 @@ def get_2021_data(generation_type: str = "solar", country_code: str = "UK", resa
     Raises:
         ValueError: if generation_type is not one of the expected values.
     """
+    if country in COUNTRY_MAP:
+        country = COUNTRY_MAP[country]
+
     base = DATA_DIR / "ERA5_2021"
     if generation_type == "solar":
         path = base / "solar_power_capacity_factor" / "NUTS_0_sp_historical.nc"
@@ -74,7 +90,7 @@ def get_2021_data(generation_type: str = "solar", country_code: str = "UK", resa
     ds = xr.open_dataset(path)
 
     # Select the data for country of interest
-    ds = ds.sel(NUTS=ds.NUTS[ds.NUTS_keys == country_code])
+    ds = ds.sel(NUTS=ds.NUTS[ds.NUTS_keys == country])
 
     # convert the time_in_hours_from_first_jan_1950 data array to a datetime index
     ds["time"] = xr.date_range(start="1950-01-01", periods=ds.sizes["time"], freq="h", use_cftime=True)
@@ -90,7 +106,7 @@ def get_2021_data(generation_type: str = "solar", country_code: str = "UK", resa
     df = ds.to_dataframe()
 
     # convert CFTimeIndex to pandas DateTimeIndex
-    df.index = pd.to_datetime(df.index.to_datetimeindex())
+    df.index = pd.to_datetime(df.index.to_datetimeindex(time_unit="ns"))
 
     df.columns = ["capacity_factor"]
 

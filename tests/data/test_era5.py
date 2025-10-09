@@ -31,7 +31,7 @@ def _make_plot(df_a: pd.DataFrame, df_b: pd.DataFrame, title: str, ylabel: str, 
 @pytest.mark.skipif(IN_CI, reason="Skip in CI")
 @pytest.mark.parametrize("generation_type", ["solar", "onshore_wind", "offshore_wind"])
 def test_get_2024_data(generation_type: str) -> None:
-    df = get_2024_data(generation_type=generation_type, country_code="UK")
+    df = get_2024_data(generation_type=generation_type, country="UK")
     assert not df.empty
     assert "capacity_factor" in df.columns
     assert (df["capacity_factor"] >= 0).all()
@@ -44,7 +44,7 @@ def test_get_2024_data(generation_type: str) -> None:
 @pytest.mark.skipif(IN_CI, reason="Skip in CI")
 @pytest.mark.parametrize("generation_type", ["solar", "onshore_wind", "offshore_wind"])
 def test_get_2021_data(generation_type: str) -> None:
-    df = get_2021_data(generation_type=generation_type, country_code="UK")
+    df = get_2021_data(generation_type=generation_type, country="UK")
     assert not df.empty
     assert "capacity_factor" in df.columns
     assert (df["capacity_factor"] >= 0).all()
@@ -57,8 +57,8 @@ def test_get_2021_data(generation_type: str) -> None:
 @pytest.mark.skipif(IN_CI, reason="Skip in CI")
 @pytest.mark.parametrize("resample", [None, "D", "ME", "YE"])
 def test_compare_solar_capacity_factors(resample: str | None) -> None:
-    df_a = get_2024_data(generation_type="solar", country_code="UK", resample=resample)
-    df_b = get_2021_data(generation_type="solar", country_code="UK", resample=resample)
+    df_a = get_2024_data(generation_type="solar", country="UK", resample=resample)
+    df_b = get_2021_data(generation_type="solar", country="UK", resample=resample)
 
     _make_plot(df_a, df_b, "Solar Capacity Factor", "Capacity Factor", f"solar_capacity_factors_{resample}.png")
 
@@ -66,8 +66,8 @@ def test_compare_solar_capacity_factors(resample: str | None) -> None:
 @pytest.mark.skipif(IN_CI, reason="Skip in CI")
 @pytest.mark.parametrize("resample", [None, "D", "ME", "YE"])
 def test_compare_onshore_wind_capacity_factors(resample: str | None) -> None:
-    df_a = get_2024_data(generation_type="onshore_wind", country_code="UK", resample=resample)
-    df_b = get_2021_data(generation_type="onshore_wind", country_code="UK", resample=resample)
+    df_a = get_2024_data(generation_type="onshore_wind", country="UK", resample=resample)
+    df_b = get_2021_data(generation_type="onshore_wind", country="UK", resample=resample)
 
     _make_plot(df_a, df_b, "Onshore Wind Capacity Factor", "Capacity Factor", f"onshore_wind_capacity_factors_{resample}.png")
 
@@ -75,7 +75,7 @@ def test_compare_onshore_wind_capacity_factors(resample: str | None) -> None:
 @pytest.mark.skipif(IN_CI, reason="Skip in CI")
 @pytest.mark.parametrize("resample", [None, "D", "ME", "YE"])
 def test_compare_offshore_wind_capacity_factors(resample: str | None) -> None:
-    df_a = get_2024_data(generation_type="offshore_wind", country_code="UK", resample=resample)
-    df_b = get_2021_data(generation_type="offshore_wind", country_code="UK", resample=resample)
+    df_a = get_2024_data(generation_type="offshore_wind", country="UK", resample=resample)
+    df_b = get_2021_data(generation_type="offshore_wind", country="UK", resample=resample)
 
     _make_plot(df_a, df_b, "Offshore Wind Capacity Factor", "Capacity Factor", f"offshore_wind_capacity_factors_{resample}.png")

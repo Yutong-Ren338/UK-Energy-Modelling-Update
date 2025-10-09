@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from src.units import Units as U
 from src.utils import annualised_cost, convert_energy_cost
 
@@ -54,6 +56,18 @@ class PowerSystem:
 class DispatchableGasCCS:
     Capacity = 18 * U.GW  # CB7 (Table 7.5.1): 38 GW total capacity (shared with generation from hydrogen). FES 2025 (Table 32) has 48.3 GW.
     LCOE = 180 * U.GBP / U.MWh  # from CB7 (Table 7.5.1): 165-194 £/MWh. Price here includes generation from hydrogen so this is not accurate.
+
+
+class Interconnectors:
+    Config: ClassVar[dict] = {
+        "France": {"Capacity": 10 * U.GW, "LCOE": 10 * U.GBP / U.MWh},
+        "Ireland": {"Capacity": 2 * U.GW, "LCOE": 15 * U.GBP / U.MWh},
+        "Netherlands": {"Capacity": 3 * U.GW, "LCOE": 20 * U.GBP / U.MWh},
+        "Germany": {"Capacity": 3 * U.GW, "LCOE": 25 * U.GBP / U.MWh},
+        "Belgium": {"Capacity": 3 * U.GW, "LCOE": 30 * U.GBP / U.MWh},
+        "Denmark": {"Capacity": 2 * U.GW, "LCOE": 35 * U.GBP / U.MWh},
+        "Norway": {"Capacity": 2 * U.GW, "LCOE": 40 * U.GBP / U.MWh},
+    }
 
 
 # ============================================================================

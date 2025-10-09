@@ -1,16 +1,21 @@
+from typing import Literal
+
 import pandas as pd
 
 from src import DATA_DIR
 from src.data.era5 import get_2021_data, get_2024_data
 from src.units import Units as U
 
+CapacityFactorSource = Literal["renewable_ninja", "era5_2021", "era5_2024"]
 
-def get_renewable_capacity_factors(source: str = "renewable_ninja", **kwargs) -> pd.DataFrame:  # noqa: ANN003
+
+def get_renewable_capacity_factors(source: CapacityFactorSource = "renewable_ninja", country: str = "UK", resample: str | None = "D") -> pd.DataFrame:
     """Get renewable capacity factors for solar, onshore wind, and offshore wind.
 
     Args:
         source: Source of the capacity factors. Options are "renewable_ninja", "era5_2021", or "era5_2024".
-        **kwargs: Additional keyword arguments to pass to the data loading functions, e.g. resample frequency.
+        country: Country for which to get the data. Renewable Ninja data is only available for the UK.
+        resample: Resampling rule for the time series data (e.g., 'D' for daily, 'ME' for monthly). If None, no resampling is done.
 
     Returns:
         DataFrame with datetime index and columns "solar", "onshore", and "offshore".
@@ -19,22 +24,24 @@ def get_renewable_capacity_factors(source: str = "renewable_ninja", **kwargs) ->
         ValueError: if source is not one of the expected values.
     """
     if source == "renewable_ninja":
-        return get_renewable_ninja(**kwargs)
+        if country != "UK":
+            raise ValueError("Renewable Ninja data is only available for the UK.")
+        return get_renewable_ninja(resample=resample)
     if source == "era5_2021":
-        pv_df = get_2021_data(generation_type="solar", country_code="UK", **kwargs)
+        pv_df = get_2021_data(generation_type="solar", country=country, resample=resample)
         pv_df = pv_df.rename(columns={"capacity_factor": "solar"})
-        onshore = get_2021_data(generation_type="onshore_wind", country_code="UK", **kwargs)
+        onshore = get_2021_data(generation_type="onshore_wind", country=country, resample=resample)
         onshore = onshore.rename(columns={"capacity_factor": "onshore"})
-        offshore = get_2021_data(generation_type="offshore_wind", country_code="UK", **kwargs)
+        offshore = get_2021_data(generation_type="offshore_wind", country=country, resample=resample)
         offshore = offshore.rename(columns={"capacity_factor": "offshore"})
         df = pv_df.join(onshore).join(offshore)
         return df.astype(f"pint[{U.dimensionless}]")
     if source == "era5_2024":
-        pv_df = get_2024_data(generation_type="solar", country_code="UK", **kwargs)
+        pv_df = get_2024_data(generation_type="solar", country=country, resample=resample)
         pv_df = pv_df.rename(columns={"capacity_factor": "solar"})
-        onshore = get_2024_data(generation_type="onshore_wind", country_code="UK", **kwargs)
+        onshore = get_2024_data(generation_type="onshore_wind", country=country, resample=resample)
         onshore = onshore.rename(columns={"capacity_factor": "onshore"})
-        offshore = get_2024_data(generation_type="offshore_wind", country_code="UK", **kwargs)
+        offshore = get_2024_data(generation_type="offshore_wind", country=country, resample=resample)
         offshore = offshore.rename(columns={"capacity_factor": "offshore"})
         df = pv_df.join(onshore).join(offshore)
         return df.astype(f"pint[{U.dimensionless}]")

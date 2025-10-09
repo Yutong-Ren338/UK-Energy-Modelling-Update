@@ -1,7 +1,9 @@
+import numpy as np
 import pandas as pd
 
 import src.assumptions as A
 from src.data import renewable_capacity_factors
+from src.data.renewable_capacity_factors import CapacityFactorSource
 from src.units import Units as U
 
 
@@ -24,18 +26,19 @@ def daily_renewables_capacity(renewable_capacity: float, capacity_factors: pd.Da
     return (total_power * A.HoursPerDay).astype("pint[TWh]")
 
 
-def get_net_supply(demand_df: pd.DataFrame) -> pd.DataFrame:
+def get_net_supply(demand_df: pd.DataFrame, capacity_factors_source: CapacityFactorSource = "renewable_ninja") -> pd.DataFrame:
     """Get net supply dataframe (supply minus demand) for analysis.
 
     Args:
         demand_df: DataFrame containing the projected 2050 demand data.
+        capacity_factors_source: Source of the renewable capacity factors. Options are "renewable_ninja", "era5_2021", or "era5_2024".
 
     Returns:
         DataFrame with renewable capacity as columns and daily net demand (supply - demand) as values.
         Negative values indicate demand exceeds supply.
     """
     # get output for a range of renewable capacities
-    daily_capacity_factors = renewable_capacity_factors.get_renewable_capacity_factors(resample="D")
+    daily_capacity_factors = renewable_capacity_factors.get_renewable_capacity_factors(source=capacity_factors_source, resample="D")
     renewable_capacities = [x * U.GW for x in range(100, 500, 10)]
     supply_df = pd.DataFrame({capacity.magnitude: daily_renewables_capacity(capacity, daily_capacity_factors) for capacity in renewable_capacities})
 
@@ -86,3 +89,54 @@ def total_unmet_demand(net_supply_df: pd.DataFrame) -> pd.Series:
     unmet_demand.name = "total_unmet_demand"
 
     return unmet_demand
+
+
+def get_surplus_days_for_country(source: CapacityFactorSource, country: str, percentile: int = 95) -> pd.DatetimeIndex:
+    """Get days where combined renewable capacity factor is above the specified percentile for a given country.
+
+    Note: the current approach of summing CF only makes sense for the current daily resampling, otherwise will never choose times at night.
+
+    Args:
+        source: Source of capacity factor data, e.g. "era5_2021" or "era5_2024"
+        country: Country name, e.g. "France"
+        percentile: Percentile threshold for surplus days
+
+    Returns:
+        pd.DatetimeIndex: Days where combined renewable capacity factor is above the specified percentile.
+
+    Raises:
+        ValueError: if country is not in country_map
+    """
+    if country not in A.Interconnectors.Config:
+        raise ValueError(f"Country {country} not configured in assumptions.Interconnectors.Config")
+
+    # get combined renewable capacity factor for country
+    combined_cf = renewable_capacity_factors.get_renewable_capacity_factors(source=source, country=country).astype(float).sum(axis=1)
+
+    # get specified percentile of combined_cf
+    x = np.percentile(combined_cf, percentile)
+
+    out = pd.DataFrame(index=combined_cf.index, columns=[country])
+    out.loc[combined_cf > x, country] = 1
+    out.loc[combined_cf <= x, country] = 0
+    return out
+
+
+def get_available_imports(source: CapacityFactorSource) -> pd.DataFrame:
+    """Get available imports from interconnectors based on surplus renewable generation in each country.
+
+    Args:
+        source: Source of capacity factor data, e.g. "era5_2021" or "era5_2024"
+
+    Returns:
+        pd.DataFrame: DataFrame with available imports from each country in GW.
+    """
+    import_df = None
+    for country, config in A.Interconnectors.Config.items():
+        days = get_surplus_days_for_country(source=source, country=country, percentile=95)
+        capacity = config["Capacity"]
+        unit = capacity.units
+        this_import = days * capacity.magnitude
+        import_df = this_import if import_df is None else import_df.join(this_import, how="inner")
+    import_df["total"] = import_df.sum(axis=1)
+    return import_df.astype(f"pint[{unit}]")
