@@ -10,7 +10,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Run tests
-        run: uv run pytest -s
+        run: uv run --frozen pytest -s
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
