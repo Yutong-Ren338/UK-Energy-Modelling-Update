@@ -30,9 +30,11 @@ class SimulationParameters(NamedTuple):
     medium_storage_efficiency: float
     # Gas CCS parameters
     gas_ccs_max_daily_energy: float
+    # Interconnect parameters
+    interconnect_imports: np.ndarray  # Daily available import capacity
 
 
-@numba.njit(cache=True)
+# @numba.njit(cache=True)
 def handle_deficit(
     net_supply: float,
     prev_medium_storage: float,
@@ -42,10 +44,11 @@ def handle_deficit(
     hydrogen_e_out: float,
     hydrogen_generation_max_daily_energy: float,
     gas_ccs_max_daily_energy: float,
-) -> tuple[float, float, float, bool]:
+    interconnect_import: float,
+) -> tuple[float, float, float, float, bool]:
     """Handle energy deficit scenario by drawing from storage.
 
-    Priority order: Medium-term storage first, then gas CCS, then hydrogen storage.
+    Priority order: Medium-term storage first, then interconnect imports, then gas CCS, then hydrogen storage.
 
     Args:
         net_supply: Negative supply-demand value (deficit)
@@ -56,14 +59,16 @@ def handle_deficit(
         hydrogen_e_out: Hydrogen storage output efficiency
         hydrogen_generation_max_daily_energy: Maximum daily energy that can be generated from hydrogen.
         gas_ccs_max_daily_energy: Maximum daily energy capacity for gas CCS
+        interconnect_import: Available import capacity for this day in TWh
 
     Returns:
-        Tuple of (new_medium_storage_level, new_hydrogen_storage_level, gas_ccs_energy, simulation_failed)
+        Tuple of (new_medium_storage_level, new_hydrogen_storage_level, gas_ccs_energy, interconnect_energy, simulation_failed)
     """
     remaining_deficit = -net_supply
     medium_storage_level = prev_medium_storage
     hydrogen_storage_level = prev_hydrogen_storage
     gas_ccs_energy = 0.0
+    interconnect_energy = 0.0
 
     # First, try to meet deficit from medium-term storage
     if remaining_deficit > 0 and prev_medium_storage > 0:
@@ -81,7 +86,12 @@ def handle_deficit(
 
         remaining_deficit -= energy_from_medium
 
-    # Second, try to meet remaining deficit from gas CCS
+    # Second, try to meet remaining deficit from interconnect imports
+    if remaining_deficit > 0 and interconnect_import > 0:
+        interconnect_energy = min(remaining_deficit, interconnect_import)
+        remaining_deficit -= interconnect_energy
+
+    # Third, try to meet remaining deficit from gas CCS
     if remaining_deficit > 0:
         gas_ccs_energy = min(remaining_deficit, gas_ccs_max_daily_energy)
         remaining_deficit -= gas_ccs_energy
@@ -103,9 +113,9 @@ def handle_deficit(
     # Check if deficit was fully met
     if remaining_deficit > 0:
         # Not enough storage to meet demand - simulation failed
-        return 0.0, 0.0, 0.0, True
+        return 0.0, 0.0, 0.0, 0.0, True
 
-    return medium_storage_level, hydrogen_storage_level, gas_ccs_energy, False
+    return medium_storage_level, hydrogen_storage_level, gas_ccs_energy, interconnect_energy, False
 
 
 @numba.njit(cache=True)
@@ -216,7 +226,7 @@ def handle_surplus(
     )
 
 
-@numba.njit(cache=True)
+# @numba.njit(cache=True)
 def simulate_power_system_core(net_supply_values: np.ndarray, params: SimulationParameters) -> np.ndarray:
     """Core simulation function optimized for Numba JIT compilation.
 
@@ -228,13 +238,13 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
         params: Simulation parameters
 
     Returns:
-        Array of shape (n_timesteps, 7) containing:
+        Array of shape (n_timesteps, 8) containing:
         [medium_storage_level, hydrogen_storage_level, dac_energy,
-         curtailed_energy, energy_into_medium_storage, energy_into_hydrogen_storage, gas_ccs_energy]
+         curtailed_energy, energy_into_medium_storage, energy_into_hydrogen_storage, gas_ccs_energy, interconnect_energy]
         Returns array filled with NaN values if simulation fails (storage hits zero).
     """
     n_timesteps = len(net_supply_values)
-    results = np.zeros((n_timesteps, 7))  # Expanded to include gas CCS energy
+    results = np.zeros((n_timesteps, 8))  # Expanded to include interconnect energy
 
     # Extract ALL parameters to local variables
     max_hydrogen_storage = params.hydrogen_storage_capacity
@@ -253,6 +263,9 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
     # Gas CCS parameters
     gas_ccs_max_daily_energy = params.gas_ccs_max_daily_energy
 
+    # Interconnect parameters
+    interconnect_imports = params.interconnect_imports
+
     prev_medium_storage = params.initial_medium_storage_level
     prev_hydrogen_storage = params.initial_hydrogen_storage_level
 
@@ -261,7 +274,7 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
 
         if net_supply <= 0:
             # Energy shortage - draw from storage
-            medium_storage_level, hydrogen_storage_level, gas_ccs_energy, simulation_failed = handle_deficit(
+            medium_storage_level, hydrogen_storage_level, gas_ccs_energy, interconnect_energy, simulation_failed = handle_deficit(
                 net_supply,
                 prev_medium_storage,
                 prev_hydrogen_storage,
@@ -270,6 +283,7 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
                 hydrogen_e_out,
                 hydrogen_generation_max_daily_energy,
                 gas_ccs_max_daily_energy,
+                interconnect_imports[i],
             )
             if simulation_failed:
                 results[:] = np.nan
@@ -308,8 +322,9 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
                 only_dac_if_storage_full,
             )
 
-            # Surplus scenario - gas CCS energy is zero
+            # Surplus scenario - gas CCS and interconnect energy are zero
             gas_ccs_energy = 0.0
+            interconnect_energy = 0.0
 
         # Direct array assignment is faster than list creation
         results[i, 0] = medium_storage_level
@@ -319,6 +334,7 @@ def simulate_power_system_core(net_supply_values: np.ndarray, params: Simulation
         results[i, 4] = energy_into_medium_storage
         results[i, 5] = energy_into_hydrogen_storage
         results[i, 6] = gas_ccs_energy
+        results[i, 7] = interconnect_energy
 
         prev_medium_storage = medium_storage_level
         prev_hydrogen_storage = hydrogen_storage_level

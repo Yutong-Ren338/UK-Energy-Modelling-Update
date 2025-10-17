@@ -186,7 +186,7 @@ def predicted_demand(
     historical: HistoricalDemandSource = "era5",
     *,
     filter_ldz: bool = True,
-    average_year: bool = True,
+    average_year: bool = False,
 ) -> pd.DataFrame:
     """Get the predicted demand for 2050 based on the specified mode.
 

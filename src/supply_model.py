@@ -91,7 +91,7 @@ def total_unmet_demand(net_supply_df: pd.DataFrame) -> pd.Series:
     return unmet_demand
 
 
-def get_surplus_days_for_country(source: CapacityFactorSource, country: str, percentile: int = 95) -> pd.DataFrame:
+def get_surplus_days_for_country(source: CapacityFactorSource, country: str, percentile: int) -> pd.DataFrame:
     """Get days where combined renewable capacity factor is above the specified percentile for a given country.
 
     Note: the current approach of summing CF only makes sense for the current daily resampling, otherwise will never choose times at night.
@@ -133,7 +133,7 @@ def get_available_imports(source: CapacityFactorSource) -> pd.DataFrame:
     """
     import_df = None
     for country, config in A.Interconnectors.Config.items():
-        days = get_surplus_days_for_country(source=source, country=country, percentile=95)
+        days = get_surplus_days_for_country(source=source, country=country, percentile=75)
         capacity = config["Capacity"]
         unit = capacity.units
         this_import = days * capacity.magnitude

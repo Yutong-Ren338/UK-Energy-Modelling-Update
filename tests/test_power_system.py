@@ -164,6 +164,7 @@ def test_analyze_simulation_results_structure(power_system_model: PowerSystem, s
         "curtailed_energy",
         "annual_gas_ccs_energy",
         "gas_ccs_capacity_factor",
+        "annual_interconnect_energy",
     }
 
     assert set(results.keys()) == expected_keys, "Results dictionary missing expected keys"

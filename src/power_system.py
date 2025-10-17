@@ -8,7 +8,9 @@ from pint import Quantity
 
 import src.assumptions as A
 from src.costs import energy_cost, total_system_cost
+from src.data.renewable_capacity_factors import CapacityFactorSource
 from src.power_system_core import SimulationParameters, simulate_power_system_core
+from src.supply_model import get_available_imports
 from src.units import Units as U
 
 # Power System Model
@@ -26,6 +28,7 @@ class SimulationColumns(NamedTuple):
     energy_into_medium_storage: str
     energy_into_hydrogen_storage: str
     gas_ccs_energy: str
+    interconnect_energy: str
 
 
 class PowerSystem:
@@ -48,6 +51,8 @@ class PowerSystem:
         medium_storage_power: Quantity | None = None,
         gas_ccs_capacity: Quantity | None = None,
         only_dac_if_hydrogen_storage_full: bool = True,
+        enable_imports: bool = False,
+        capacity_factors_source: CapacityFactorSource = "era5_2024",
     ) -> None:
         """Initialize the power system model with required parameters.
 
@@ -61,6 +66,8 @@ class PowerSystem:
             medium_storage_power: Medium-term storage power capacity in GW. If None, uses default from assumptions.
             gas_ccs_capacity: Dispatchable gas CCS capacity in GW. If None, uses default from assumptions.
             only_dac_if_hydrogen_storage_full: Whether DAC only operates when hydrogen storage is full.
+            enable_imports: Whether to enable interconnect imports from neighboring countries.
+            capacity_factors_source: Source for capacity factors, used for interconnect calculations if enable_imports is True.
         """
         # check pint units before running
         assert renewable_capacity.units == U.GW, "Renewable capacity must be in GW"
@@ -124,6 +131,13 @@ class PowerSystem:
         self.gas_ccs_capacity = gas_ccs_capacity.magnitude
         self.gas_ccs_max_daily_energy = (gas_ccs_capacity * A.HoursPerDay).to(U.TWh).magnitude
 
+        # Set interconnect parameters
+        self.enable_imports = enable_imports
+        self.interconnect_imports_df = None
+        if enable_imports:
+            # Load interconnect data based on capacity factors source
+            self.interconnect_imports_df = get_available_imports(source=capacity_factors_source)
+
     def run_simulation(self, net_supply_df: pd.DataFrame) -> pd.DataFrame | None:
         """Run power system simulation for this renewable capacity scenario.
 
@@ -149,10 +163,25 @@ class PowerSystem:
             energy_into_medium_storage=f"energy_into_medium_storage (TWh),RC={self.renewable_capacity}GW",
             energy_into_hydrogen_storage=f"energy_into_hydrogen_storage (TWh),RC={self.renewable_capacity}GW",
             gas_ccs_energy=f"gas_ccs_energy (TWh),RC={self.renewable_capacity}GW",
+            interconnect_energy=f"interconnect_energy (TWh),RC={self.renewable_capacity}GW",
         )
 
         # Get supply-demand values as numpy array for faster processing
         supply_demand_values = net_supply_df[supply_demand_col].astype(float).to_numpy()
+
+        # Prepare interconnect imports array
+        if self.interconnect_imports_df is not None:
+            # Ensure same index alignment as supply_demand
+            net_supply_df = net_supply_df.set_index("index")
+            common_idx = net_supply_df.index.intersection(self.interconnect_imports_df.index)
+            interconnect_imports_aligned = self.interconnect_imports_df.reindex(common_idx)
+            supply_demand_aligned = net_supply_df.reindex(common_idx)
+
+            # Use the 'total' column and convert to TWh (from GW * 24h)
+            interconnect_imports_array = (interconnect_imports_aligned["total"] * A.HoursPerDay).pint.to(U.TWh).astype(float).to_numpy()
+            supply_demand_values = supply_demand_aligned[supply_demand_col].astype(float).to_numpy()
+        else:
+            interconnect_imports_array = np.zeros(len(supply_demand_values))
 
         # Create simulation parameters
         params = SimulationParameters(
@@ -169,6 +198,7 @@ class PowerSystem:
             medium_storage_max_daily_energy=self.medium_storage_max_daily_energy,
             medium_storage_efficiency=self.medium_storage_efficiency,
             gas_ccs_max_daily_energy=self.gas_ccs_max_daily_energy,
+            interconnect_imports=interconnect_imports_array,
         )
 
         # Run the core simulation
@@ -179,18 +209,16 @@ class PowerSystem:
             return None
 
         # Create new results DataFrame with proper units
-        results_df = pd.DataFrame(
-            {
-                columns.medium_storage_level: pd.Series(results[:, 0], dtype="pint[TWh]"),
-                columns.hydrogen_storage_level: pd.Series(results[:, 1], dtype="pint[TWh]"),
-                columns.dac_energy: pd.Series(results[:, 2], dtype="pint[TWh]"),
-                columns.curtailed_energy: pd.Series(results[:, 3], dtype="pint[TWh]"),
-                columns.energy_into_medium_storage: pd.Series(results[:, 4], dtype="pint[TWh]"),
-                columns.energy_into_hydrogen_storage: pd.Series(results[:, 5], dtype="pint[TWh]"),
-                columns.gas_ccs_energy: pd.Series(results[:, 6], dtype="pint[TWh]"),
-            },
-            index=net_supply_df.index,
-        )
+        results_df = pd.DataFrame({
+            columns.medium_storage_level: pd.Series(results[:, 0], dtype="pint[TWh]"),
+            columns.hydrogen_storage_level: pd.Series(results[:, 1], dtype="pint[TWh]"),
+            columns.dac_energy: pd.Series(results[:, 2], dtype="pint[TWh]"),
+            columns.curtailed_energy: pd.Series(results[:, 3], dtype="pint[TWh]"),
+            columns.energy_into_medium_storage: pd.Series(results[:, 4], dtype="pint[TWh]"),
+            columns.energy_into_hydrogen_storage: pd.Series(results[:, 5], dtype="pint[TWh]"),
+            columns.gas_ccs_energy: pd.Series(results[:, 6], dtype="pint[TWh]"),
+            columns.interconnect_energy: pd.Series(results[:, 7], dtype="pint[TWh]"),
+        })
 
         # === VALIDATE RESULTS ===
         self._validate_simulation_results(results_df, columns)
@@ -199,7 +227,7 @@ class PowerSystem:
 
     def _validate_simulation_results(self, df: pd.DataFrame, columns: SimulationColumns) -> None:
         """Validate simulation results to ensure physical constraints are met."""
-        assert (df[columns.curtailed_energy] >= 0).all(), "Unused energy cannot be negative"
+        assert (df[columns.curtailed_energy] >= 0).all(), "Curtailed energy cannot be negative"
         assert (df[columns.hydrogen_storage_level] <= self.hydrogen_storage_capacity * U.TWh).all(), "Hydrogen storage cannot exceed maximum capacity"
         assert (df[columns.medium_storage_level] <= self.medium_storage_capacity * U.TWh).all(), "Medium storage cannot exceed maximum capacity"
         assert (df[columns.dac_energy] <= self.dac_max_daily_energy * U.TWh).all(), "DAC energy cannot exceed its maximum daily capacity"
@@ -207,6 +235,7 @@ class PowerSystem:
         assert (df[columns.medium_storage_level] >= 0).all(), "Medium storage cannot be negative"
         assert (df[columns.gas_ccs_energy] >= 0).all(), "Gas CCS energy cannot be negative"
         assert (df[columns.gas_ccs_energy] <= self.gas_ccs_max_daily_energy * U.TWh).all(), "Gas CCS energy cannot exceed its maximum daily capacity"
+        assert (df[columns.interconnect_energy] >= 0).all(), "Interconnect energy cannot be negative"
 
     def analyze_simulation_results(self, sim_df: pd.DataFrame | None) -> dict | None:
         """Analyze simulation results and return key metrics.
@@ -227,6 +256,7 @@ class PowerSystem:
         dac_column = f"dac_energy (TWh),RC={int(self.renewable_capacity)}GW"
         unused_column = f"curtailed_energy (TWh),RC={int(self.renewable_capacity)}GW"
         gas_ccs_column = f"gas_ccs_energy (TWh),RC={int(self.renewable_capacity)}GW"
+        interconnect_column = f"interconnect_energy (TWh),RC={int(self.renewable_capacity)}GW"
 
         # Calculate key metrics
         minimum_medium_storage = sim_df[medium_storage_column].min()
@@ -239,6 +269,7 @@ class PowerSystem:
         curtailed_energy = sim_df[unused_column].mean() * 365
         annual_gas_ccs_energy = sim_df[gas_ccs_column].mean() * 365
         gas_ccs_capacity_factor = (sim_df[gas_ccs_column] > 0).mean()  # Simplified calculation based on operating days
+        annual_interconnect_energy = sim_df[interconnect_column].mean() * 365
 
         return {
             "minimum_medium_storage": minimum_medium_storage,
@@ -249,6 +280,7 @@ class PowerSystem:
             "curtailed_energy": curtailed_energy,
             "annual_gas_ccs_energy": annual_gas_ccs_energy,
             "gas_ccs_capacity_factor": gas_ccs_capacity_factor,
+            "annual_interconnect_energy": annual_interconnect_energy,
         }
 
     def calculate_power_system_cost(self, sim_df: pd.DataFrame | None = None) -> Quantity:
@@ -313,7 +345,8 @@ class PowerSystem:
             f"• DAC Capacity Factor: {results['dac_capacity_factor']:.1%}\n"
             f"• Gas CCS energy: {results['annual_gas_ccs_energy']:~0.1f}\n"
             f"• Gas CCS Capacity Factor: {results['gas_ccs_capacity_factor']:.1%}\n"
-            f"• Curtailed energy: {results['curtailed_energy']:~0.1f}"
+            f"• Curtailed energy: {results['curtailed_energy']:~0.1f}\n"
+            f"• Interconnect energy: {results['annual_interconnect_energy']:~0.1f}\n"
         )
 
     def print_simulation_results(self, results: dict | None) -> None:
@@ -398,6 +431,12 @@ class PowerSystem:
             label="Medium Storage",
         )
         ax2.plot(sim_df[f"dac_energy (TWh),RC={self.renewable_capacity}GW"], color="red", linewidth=0.5, label="DAC Energy")
+        ax2.plot(
+            sim_df[f"interconnect_energy (TWh),RC={self.renewable_capacity}GW"],
+            color="blue",
+            linewidth=0.5,
+            label="Interconnect Imports",
+        )
         ax2.set_xlabel("Day in 40 Years")
         ax2.set_ylabel("Energy (TWh)")
         ax2.legend(loc="upper right", fontsize=10, facecolor="white", edgecolor="gray", frameon=True, framealpha=0.9)
