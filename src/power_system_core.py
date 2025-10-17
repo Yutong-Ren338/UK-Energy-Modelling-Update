@@ -34,7 +34,7 @@ class SimulationParameters(NamedTuple):
     interconnect_imports: np.ndarray  # Daily available import capacity
 
 
-# @numba.njit(cache=True)
+@numba.njit(cache=True)
 def handle_deficit(
     net_supply: float,
     prev_medium_storage: float,
@@ -226,7 +226,7 @@ def handle_surplus(
     )
 
 
-# @numba.njit(cache=True)
+@numba.njit(cache=True)
 def simulate_power_system_core(net_supply_values: np.ndarray, params: SimulationParameters) -> np.ndarray:
     """Core simulation function optimized for Numba JIT compilation.
 
