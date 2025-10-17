@@ -91,7 +91,7 @@ def total_unmet_demand(net_supply_df: pd.DataFrame) -> pd.Series:
     return unmet_demand
 
 
-def get_surplus_days_for_country(source: CapacityFactorSource, country: str, percentile: int = 95) -> pd.DatetimeIndex:
+def get_surplus_days_for_country(source: CapacityFactorSource, country: str, percentile: int = 95) -> pd.DataFrame:
     """Get days where combined renewable capacity factor is above the specified percentile for a given country.
 
     Note: the current approach of summing CF only makes sense for the current daily resampling, otherwise will never choose times at night.
@@ -102,7 +102,7 @@ def get_surplus_days_for_country(source: CapacityFactorSource, country: str, per
         percentile: Percentile threshold for surplus days
 
     Returns:
-        pd.DatetimeIndex: Days where combined renewable capacity factor is above the specified percentile.
+        DataFrame with 1s on days with available imports and 0s otherwise.
 
     Raises:
         ValueError: if country is not in country_map
@@ -138,5 +138,6 @@ def get_available_imports(source: CapacityFactorSource) -> pd.DataFrame:
         unit = capacity.units
         this_import = days * capacity.magnitude
         import_df = this_import if import_df is None else import_df.join(this_import, how="inner")
+    assert import_df is not None
     import_df["total"] = import_df.sum(axis=1)
     return import_df.astype(f"pint[{unit}]")

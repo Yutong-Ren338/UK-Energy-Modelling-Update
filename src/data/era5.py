@@ -106,7 +106,7 @@ def get_2021_data(generation_type: str = "solar", country: str = "UK", resample:
     df = ds.to_dataframe()
 
     # convert CFTimeIndex to pandas DateTimeIndex
-    df.index = pd.to_datetime(df.index.to_datetimeindex(time_unit="ns"))
+    df.index = pd.to_datetime(df.index.to_datetimeindex(time_unit="ns"))  # type: ignore[possibly-missing-attribute]
 
     df.columns = ["capacity_factor"]
 
