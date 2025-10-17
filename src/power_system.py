@@ -419,6 +419,12 @@ class PowerSystem:
             label="Hydrogen Storage",
         )
         ax2.plot(
+            sim_df[f"interconnect_energy (TWh),RC={self.renewable_capacity}GW"],
+            color="blue",
+            linewidth=0.5,
+            label="Interconnect Imports",
+        )
+        ax2.plot(
             sim_df[f"gas_ccs_energy (TWh),RC={self.renewable_capacity}GW"],
             color="purple",
             linewidth=0.5,
@@ -431,12 +437,6 @@ class PowerSystem:
             label="Medium Storage",
         )
         ax2.plot(sim_df[f"dac_energy (TWh),RC={self.renewable_capacity}GW"], color="red", linewidth=0.5, label="DAC Energy")
-        ax2.plot(
-            sim_df[f"interconnect_energy (TWh),RC={self.renewable_capacity}GW"],
-            color="blue",
-            linewidth=0.5,
-            label="Interconnect Imports",
-        )
         ax2.set_xlabel("Day in 40 Years")
         ax2.set_ylabel("Energy (TWh)")
         ax2.legend(loc="upper right", fontsize=10, facecolor="white", edgecolor="gray", frameon=True, framealpha=0.9)

@@ -70,7 +70,12 @@ def handle_deficit(
     gas_ccs_energy = 0.0
     interconnect_energy = 0.0
 
-    # First, try to meet deficit from medium-term storage
+    # Try to meet remaining deficit from interconnect imports
+    if remaining_deficit > 0 and interconnect_import > 0:
+        interconnect_energy = min(remaining_deficit, interconnect_import)
+        remaining_deficit -= interconnect_energy
+
+    # Try to meet deficit from medium-term storage
     if remaining_deficit > 0 and prev_medium_storage > 0:
         # Available energy from medium storage (considering efficiency and power constraints)
         available_from_medium = min(prev_medium_storage * medium_storage_efficiency, medium_storage_max_daily_energy)
@@ -86,12 +91,7 @@ def handle_deficit(
 
         remaining_deficit -= energy_from_medium
 
-    # Second, try to meet remaining deficit from interconnect imports
-    if remaining_deficit > 0 and interconnect_import > 0:
-        interconnect_energy = min(remaining_deficit, interconnect_import)
-        remaining_deficit -= interconnect_energy
-
-    # Third, try to meet remaining deficit from gas CCS
+    # Try to meet remaining deficit from gas CCS
     if remaining_deficit > 0:
         gas_ccs_energy = min(remaining_deficit, gas_ccs_max_daily_energy)
         remaining_deficit -= gas_ccs_energy

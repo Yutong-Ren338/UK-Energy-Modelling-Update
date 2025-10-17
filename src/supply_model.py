@@ -133,7 +133,7 @@ def get_available_imports(source: CapacityFactorSource) -> pd.DataFrame:
     """
     import_df = None
     for country, config in A.Interconnectors.Config.items():
-        days = get_surplus_days_for_country(source=source, country=country, percentile=75)
+        days = get_surplus_days_for_country(source=source, country=country, percentile=50)
         capacity = config["Capacity"]
         unit = capacity.units
         this_import = days * capacity.magnitude
